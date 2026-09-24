@@ -89,3 +89,7 @@ task descriptions or code. Tokens stay in `.env` and are never displayed. Nothin
 ## Stack
 
 Python 3.12 · uv · PostgreSQL · SQLAlchemy · Streamlit · Plotly · httpx
+
+## License
+
+[MIT](LICENSE)
