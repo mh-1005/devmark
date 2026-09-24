@@ -16,9 +16,9 @@ SOURCE_LABEL = {"github": "GitHub", "leetcode": "LeetCode", "todoist": "Todoist"
 
 st.set_page_config(page_title=APP_NAME, page_icon="◎", layout="wide")
 
-st.markdown("""
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap">
+st.html("""
 <style>
+@import url("https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap");
 html, body, [class*="st-"] { font-family: "IBM Plex Sans", system-ui, sans-serif; }
 .block-container { max-width: 1140px; padding-top: 2rem; }
 .mono { font-family: "JetBrains Mono", ui-monospace, monospace; }
@@ -56,17 +56,17 @@ html, body, [class*="st-"] { font-family: "IBM Plex Sans", system-ui, sans-serif
 .empty { color: #6f788a; font-size: 13px; padding: 24px 0; text-align: center; }
 @media (max-width: 800px) { .tiles { grid-template-columns: repeat(2, 1fr); } }
 </style>
-""", unsafe_allow_html=True)
+""")
 
 # ---- header ---------------------------------------------------------------
 
 mock_pill = '<span class="pill">● MOCK DATA</span>' if mock_mode_enabled() else ""
-st.markdown(f"""
+st.html(f"""
 <div class="hdr">
   <div><h1>{APP_NAME}<span>_</span></h1><p>{TAGLINE}</p></div>
   <div class="right"><div class="date">{date.today():%a %d %b %Y}</div>{mock_pill}</div>
 </div>
-""", unsafe_allow_html=True)
+""")
 
 # ---- filters --------------------------------------------------------------
 
@@ -92,12 +92,12 @@ def tile(cat: str, src: str, value: str, sub: str) -> str:
             f'<span class="src">{src}</span></div><div class="val">{value}</div><div class="sub">{sub}</div></div>')
 
 
-st.markdown('<div class="tiles">' + "".join([
+st.html('<div class="tiles">' + "".join([
     tile("BUILD", "GitHub", str(b["commits"]), f'commits · {b["prs"]} pull requests · {b["repos"]} repos'),
     tile("LEARN", "LeetCode", str(l["problems"]), f'problems · {l["easy"]} easy · {l["medium"]} medium · {l["hard"]} hard'),
     tile("DO", "Todoist", str(d["tasks"]), f'tasks completed · {d["projects"]} projects'),
     tile("ASSIST", "Claude Code", f'{a["hours"]:.1f}<small>h</small>', f'{a["sessions"]} sessions · {a["projects"]} projects · {a["prompts"]} prompts'),
-]) + "</div>", unsafe_allow_html=True)
+]) + "</div>")
 
 # ---- timeline -------------------------------------------------------------
 
@@ -145,4 +145,4 @@ for r in rows:
 if current_day is not None:
     parts.append("</div>")
 parts.append("</div>")
-st.markdown("".join(parts), unsafe_allow_html=True)
+st.html("".join(parts))
