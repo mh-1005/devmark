@@ -24,7 +24,9 @@ st.set_page_config(page_title=APP_NAME, page_icon="◎", layout="wide")
 st.html("""
 <style>
 @import url("https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap");
-html, body, [class*="st-"] { font-family: "IBM Plex Sans", system-ui, sans-serif; }
+html, body, .stApp { font-family: "IBM Plex Sans", system-ui, sans-serif; }
+/* Streamlit draws its icons with a ligature font; keep our font away from them. */
+[data-testid="stIconMaterial"], .material-symbols-rounded, [class*="material-symbols"] { font-family: "Material Symbols Rounded" !important; }
 .block-container { max-width: 1140px; padding-top: 4rem; }
 .mono { font-family: "JetBrains Mono", ui-monospace, monospace; }
 .label { font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: #6f788a; font-weight: 500; }
