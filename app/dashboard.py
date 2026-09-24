@@ -11,4 +11,4 @@ activities = get_recent_activities()
 st.subheader(f"{len(activities)} activities in the database")
 
 for a in activities:
-    st.write(f"**{a.timestamp:%Y-%m-%d %H:%M}** · {a.source} · {a.category} · {a.title}")
+    st.write(f"**{a.timestamp.astimezone():%Y-%m-%d %H:%M}** · {a.source} · {a.activity_type} · {a.title}")

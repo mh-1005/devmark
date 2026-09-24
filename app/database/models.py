@@ -43,5 +43,19 @@ class Activity(Base):
 
     __table_args__ = (UniqueConstraint("source", "external_id", name="uq_source_external_id"),)
 
+    def as_row(self) -> dict:
+        """Plain dict of column values, for bulk inserts."""
+        return {
+            "user_id": self.user_id,
+            "source": self.source,
+            "category": self.category,
+            "activity_type": self.activity_type,
+            "title": self.title,
+            "timestamp": self.timestamp,
+            "duration_seconds": self.duration_seconds,
+            "meta": self.meta or {},  # attribute name; SQLAlchemy maps it to the "metadata" column
+            "external_id": self.external_id,
+        }
+
     def __repr__(self) -> str:
         return f"<Activity {self.source}/{self.activity_type} '{self.title}' @ {self.timestamp:%Y-%m-%d %H:%M}>"
