@@ -92,6 +92,18 @@ html, body, .stApp { font-family: "IBM Plex Sans", system-ui, sans-serif; }
 </style>
 """)
 
+# ---- auto sync -------------------------------------------------------------
+
+SYNC_EVERY_SECONDS = 15 * 60
+
+
+@st.cache_data(ttl=SYNC_EVERY_SECONDS, show_spinner="Syncing…")
+def auto_sync() -> list[dict]:
+    """Runs ingest at most once per SYNC_EVERY_SECONDS, shared by every open tab.
+    The cache is the throttle: while a result is cached, this returns it without touching any API."""
+    return ingest([cls() for cls in ALL_CONNECTORS])
+
+
 # ---- sidebar: accounts, connect, sync -------------------------------------
 
 connectors = {cls.source: cls() for cls in ALL_CONNECTORS}  # fresh instances read the current .env
@@ -116,16 +128,23 @@ with st.sidebar:
             if st.form_submit_button("Save", type="primary"):
                 typed = {"GITHUB_TOKEN": gh_token, "GITHUB_USERNAME": gh_user, "LEETCODE_USERNAME": lc_user, "TODOIST_API_TOKEN": td_token}
                 save_env({k: v.strip() for k, v in typed.items() if v.strip()})  # blank = leave as is
+                st.session_state["force_sync"] = True  # new token → sync right away
                 st.rerun()
         st.caption("Saved to .env on this machine. Tokens are never shown again.")
 
     if st.button("⟳  Sync now", width="stretch"):
-        with st.spinner("Syncing…"):
-            results = ingest([cls() for cls in ALL_CONNECTORS])
-        errors = [f"{SOURCE_LABEL[r['source']]}: {r['error'][:80]}" for r in results if r["mode"] == "error"]
-        new = sum(r["inserted"] for r in results)
-        st.toast(f"Synced · {new} new" if not errors else "Sync finished with errors: " + "; ".join(errors))
+        st.session_state["force_sync"] = True
         st.rerun()
+    st.caption(f"Syncs automatically every {SYNC_EVERY_SECONDS // 60} minutes while open.")
+
+forced = st.session_state.pop("force_sync", False)
+if forced:
+    auto_sync.clear()
+sync_results = auto_sync()
+if forced:
+    errors = [f"{SOURCE_LABEL[r['source']]}: {r['error'][:80]}" for r in sync_results if r["mode"] == "error"]
+    new = sum(r["inserted"] for r in sync_results)
+    st.toast(f"Synced · {new} new" if not errors else "Sync finished with errors: " + "; ".join(errors))
 
 # ---- header ---------------------------------------------------------------
 

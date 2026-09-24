@@ -86,8 +86,12 @@ Where to get them:
 A source that isn't connected shows a "Not connected" tile and is left out of everything else.
 Nothing is faked unless you ask for it.
 
-Sync from the terminal instead of the sidebar with `uv run python -m scripts.ingest`.
-Run it at least weekly: free Todoist accounts keep only about a week of activity log.
+**Syncing.** The page syncs on load if the last sync was more than 15 minutes ago, and
+"Sync now" forces one. From the terminal: `uv run python -m scripts.ingest`. Open the
+dashboard at least weekly: free Todoist accounts keep only about a week of activity log.
+
+Editing `.env` by hand while the app is running is not picked up until you restart it;
+the sidebar's Save button reloads it live.
 
 ## Environment variables
 
