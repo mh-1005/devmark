@@ -14,8 +14,8 @@ __pycache__/
 .vscode/
 .idea/
 
-# Personal learning notes (not tracked)
-learnings/
+# Personal notes (not tracked)
+notes/
 
 # Assistant project brief (local only)
 CLAUDE.md
