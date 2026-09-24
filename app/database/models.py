@@ -13,10 +13,8 @@ from app.database.database import Base
 class Category(str, enum.Enum):
     BUILD = "BUILD"    # GitHub
     LEARN = "LEARN"    # LeetCode
-    TIME = "TIME"      # Google Calendar
-    LISTEN = "LISTEN"  # Spotify
-    READ = "READ"      # Goodreads
     DO = "DO"          # Todoist
+    ASSIST = "ASSIST"  # Claude Code
 
 
 class Activity(Base):

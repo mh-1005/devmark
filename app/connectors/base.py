@@ -11,8 +11,9 @@ def mock_mode_enabled() -> bool:
 
 
 class BaseConnector(ABC):
-    source: str      # "github", "spotify", ...
-    category: str    # one of Category values
+    source: str          # "github", "leetcode", ...
+    category: str        # one of Category values
+    local: bool = False  # True = reads files on this machine; only works when the app runs locally
 
     @abstractmethod
     def is_configured(self) -> bool:

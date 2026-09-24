@@ -27,4 +27,4 @@ def ingest(connectors: list[BaseConnector]) -> None:
     for connector in connectors:
         activities, mode = connector.run()
         inserted = save_activities(activities)
-        print(f"{connector.source:<10} [{mode}]  fetched {len(activities):>3}  inserted {inserted:>3}  skipped {len(activities) - inserted:>3}")
+        print(f"{connector.source:<12} [{mode}]  fetched {len(activities):>3}  inserted {inserted:>3}  skipped {len(activities) - inserted:>3}")
