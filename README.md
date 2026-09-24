@@ -33,7 +33,7 @@ git clone https://github.com/mh-1005/devmark.git
 cd devmark
 uv sync
 createdb devmark
-cp .env.example .env                # set TIMEZONE, leave the tokens empty
+cp .env.example .env                # set TIMEZONE; account tokens can be added here or later from the dashboard
 uv run python -m scripts.init_db
 ```
 
@@ -43,11 +43,14 @@ uv run python -m scripts.init_db
 uv run devmark
 ```
 
-Opens at `http://localhost:8501`. Your data stays in the database between runs.
-
 ## Connect accounts
 
-Open the sidebar, paste your tokens under "Connect accounts", click Save, then "Sync now".
+Credentials can be provided in either of two ways:
+
+- **In the dashboard:** open the sidebar, expand "Connect accounts", enter your tokens, click Save, then "Sync now". Values are written to `.env`.
+- **In `.env` directly:** fill in the variables listed under Configuration before starting the app.
+
+Where to get each credential:
 
 - GitHub: Settings → Developer settings → Fine-grained tokens. Read-only `Contents` and `Pull requests`.
 - LeetCode: your username from `leetcode.com/u/<username>/`.
