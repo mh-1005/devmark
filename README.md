@@ -97,6 +97,4 @@ Python 3.12 · uv · PostgreSQL · SQLAlchemy · Streamlit · Plotly · httpx
 
 ## 📄 License
 
-DEVMARK is released under the [MIT License](LICENSE). You are free to use, copy, modify and
-distribute it, including in commercial projects, as long as the original copyright and license
-notice are kept. The software is provided as is, without warranty of any kind.
+[MIT](LICENSE). Use it however you like, just keep the copyright notice.
