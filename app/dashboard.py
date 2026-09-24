@@ -109,10 +109,10 @@ with st.sidebar:
 
     with st.expander("Connect accounts", expanded=not all(c.is_configured() for c in connectors.values())):
         with st.form("connect", border=False):
-            gh_token = st.text_input("GitHub token", type="password", placeholder="github_pat_…")
+            gh_token = st.text_input("GitHub token", type="password")
             gh_user = st.text_input("GitHub username", value=os.getenv("GITHUB_USERNAME", ""))
             lc_user = st.text_input("LeetCode username", value=os.getenv("LEETCODE_USERNAME", ""))
-            td_token = st.text_input("Todoist token", type="password", placeholder="Settings → Integrations → Developer")
+            td_token = st.text_input("Todoist token", type="password")
             if st.form_submit_button("Save", type="primary"):
                 typed = {"GITHUB_TOKEN": gh_token, "GITHUB_USERNAME": gh_user, "LEETCODE_USERNAME": lc_user, "TODOIST_API_TOKEN": td_token}
                 save_env({k: v.strip() for k, v in typed.items() if v.strip()})  # blank = leave as is
@@ -121,13 +121,11 @@ with st.sidebar:
 
     if st.button("⟳  Sync now", width="stretch"):
         with st.spinner("Syncing…"):
-            st.session_state["last_sync"] = (datetime.now(), ingest([cls() for cls in ALL_CONNECTORS]))
+            results = ingest([cls() for cls in ALL_CONNECTORS])
+        errors = [f"{SOURCE_LABEL[r['source']]}: {r['error'][:80]}" for r in results if r["mode"] == "error"]
+        new = sum(r["inserted"] for r in results)
+        st.toast(f"Synced · {new} new" if not errors else "Sync finished with errors: " + "; ".join(errors))
         st.rerun()
-    if "last_sync" in st.session_state:
-        when, results = st.session_state["last_sync"]
-        lines = [f"{SOURCE_LABEL[r['source']]}: " + (f"error · {r['error'][:60]}" if r["mode"] == "error" else f"{r['mode']} · +{r['inserted']} new")
-                 for r in results]
-        st.html(f'<div class="sync">Last sync {when:%H:%M}<br>' + "<br>".join(html.escape(x) for x in lines) + "</div>")
 
 # ---- header ---------------------------------------------------------------
 
@@ -227,7 +225,7 @@ def heatmap_html(source) -> str:
         cells.append(f'<span class="wl">{monday:%d %b}</span>' if week % 2 == 0 else '<span class="wl"></span>')
     in_play = [SOURCE_CATEGORY[s] for s in ([source] if isinstance(source, str) else source)]
     legend = "".join(f'<span><i style="background:{COLOR[c]}"></i>{CATEGORY_SOURCE[c]}</span>' for c in in_play)
-    return f'<div class="hm">{"".join(cells)}</div><div class="legend">{legend}<span>darker = busier day</span></div>'
+    return f'<div class="hm">{"".join(cells)}</div><div class="legend">{legend}</div>'
 
 
 def per_day_chart(days, source) -> go.Figure | None:
@@ -321,8 +319,7 @@ with right:
             arrow = "▲" if r["current"] > r["previous"] else "▼" if r["current"] < r["previous"] else "="
             cmp_rows.append(
                 f'<div class="cmp" style="--c:{COLOR[r["category"]]}"><span>{SOURCE_LABEL[r["source"]]}</span>'
-                f'<div class="bars"><div class="bar"><i style="width:{100 * r["current"] / top:.0f}%"></i></div>'
-                f'<div class="bar prev"><i style="width:{100 * r["previous"] / top:.0f}%"></i></div></div>'
+                f'<div class="bars"><div class="bar"><i style="width:{100 * r["current"] / top:.0f}%"></i></div></div>'
                 f'<span class="v">{r["current"]} {UNIT[r["source"]]}<em>{arrow} was {r["previous"]}</em></span></div>'
             )
         st.html(f'<div class="panel"><h2>Compared to the previous {range_label.lower()} <span>each source vs itself</span></h2>'
