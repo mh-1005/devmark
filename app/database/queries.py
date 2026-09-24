@@ -123,3 +123,20 @@ def by_source(days, source) -> list[dict]:
         GROUP BY 1, 2
         ORDER BY n DESC
     """, p)
+
+
+def source_comparison(days: int, source) -> list[dict]:
+    """Per source: activity count in the current window vs the same-length window right before it."""
+    src_clause = "AND source = :source" if source else ""
+    return _run(f"""
+        WITH bounds AS (
+            SELECT (date_trunc('day', now() AT TIME ZONE :tz) - make_interval(days => :back)) AT TIME ZONE :tz AS start
+        )
+        SELECT source, category,
+               count(*) FILTER (WHERE timestamp >= start)  AS current,
+               count(*) FILTER (WHERE timestamp <  start)  AS previous
+        FROM activities, bounds
+        WHERE timestamp >= start - make_interval(days => :days) {src_clause}
+        GROUP BY 1, 2
+        ORDER BY current DESC
+    """, {"tz": TZ, "back": days - 1, "days": days, **({"source": source} if source else {})})

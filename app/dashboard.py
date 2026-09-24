@@ -60,6 +60,20 @@ html, body, [class*="st-"] { font-family: "IBM Plex Sans", system-ui, sans-serif
 .hbar .v { text-align: right; color: #aab2c2; font-family: "JetBrains Mono", monospace; }
 .ptitle { font-size: 13px; font-weight: 600; display: flex; justify-content: space-between; margin-bottom: 4px; }
 .ptitle span { font-weight: 400; color: #6f788a; font-size: 12px; }
+.hm { display: grid; grid-template-columns: 34px repeat(12, 1fr); gap: 3px; align-items: center; }
+.hm .rl { font-size: 11px; color: #6f788a; font-family: "JetBrains Mono", monospace; }
+.hm .c { display: block; height: 14px; border-radius: 3px; background: #1e232d; }
+.hm .c.future { background: transparent; }
+.hm .wl { font-size: 10px; color: #6f788a; font-family: "JetBrains Mono", monospace; padding-top: 4px; }
+.legend { display: flex; gap: 14px; font-size: 11px; color: #6f788a; margin-top: 10px; }
+.legend i { display: inline-block; width: 9px; height: 9px; border-radius: 2px; margin-right: 5px; vertical-align: -1px; }
+.cmp { display: grid; grid-template-columns: 90px 1fr 120px; gap: 10px; align-items: center; font-size: 12px; padding: 5px 0; }
+.cmp .bars { display: grid; gap: 3px; }
+.cmp .bar { height: 7px; border-radius: 4px; background: #1e232d; overflow: hidden; }
+.cmp .bar i { display: block; height: 100%; border-radius: 4px; background: var(--c); }
+.cmp .bar.prev i { background: #3a4152; }
+.cmp .v { text-align: right; color: #e8ebf1; font-family: "JetBrains Mono", monospace; }
+.cmp .v em { display: block; font-style: normal; color: #6f788a; font-size: 11px; }
 .empty { color: #6f788a; font-size: 13px; padding: 24px 0; text-align: center; }
 @media (max-width: 800px) { .tiles { grid-template-columns: repeat(2, 1fr); } }
 </style>
@@ -118,27 +132,43 @@ PLOT_LAYOUT = dict(
 NO_MODEBAR = {"displayModeBar": False}
 
 
-def heatmap(source) -> go.Figure:
-    """GitHub-style contribution grid: last 12 weeks, one cell per day, shade = activity count."""
+CATEGORY_SOURCE = {"BUILD": "GitHub", "LEARN": "LeetCode", "DO": "Todoist", "ASSIST": "Claude Code"}
+
+
+def heatmap_html(source) -> str:
+    """Contribution grid for the last 12 weeks. Cell color = the category that dominated the day,
+    shade = how much happened, hover = the full breakdown."""
     today = date.today()
     start = today - timedelta(days=today.weekday() + 7 * 11)  # Monday, 11 weeks back
-    counts: dict[date, int] = {}
+    per_day: dict[date, dict[str, int]] = {}
     for r in q.per_day(None, source):
         if r["day"] >= start:
-            counts[r["day"]] = counts.get(r["day"], 0) + r["n"]
-    weeks = [start + timedelta(weeks=w) for w in range(12)]
-    z, text = [], []
-    for dow in range(7):
-        z.append([counts.get(wk + timedelta(days=dow), 0) if wk + timedelta(days=dow) <= today else None for wk in weeks])
-        text.append([f"{wk + timedelta(days=dow):%a %d %b} · {counts.get(wk + timedelta(days=dow), 0)} activities" for wk in weeks])
-    fig = go.Figure(go.Heatmap(
-        z=z, text=text, hoverinfo="text", xgap=3, ygap=3, showscale=False,
-        colorscale=[[0, "#1e232d"], [0.01, "#1e3a5f"], [1, "#3987e5"]], zmin=0,
-    ))
-    fig.update_layout(**PLOT_LAYOUT, height=150)
-    fig.update_xaxes(tickvals=list(range(12)), ticktext=[f"{w:%d %b}" if i % 2 == 0 else "" for i, w in enumerate(weeks)], showgrid=False, zeroline=False)
-    fig.update_yaxes(tickvals=list(range(7)), ticktext=["Mon", "", "Wed", "", "Fri", "", "Sun"], showgrid=False, zeroline=False, autorange="reversed")
-    return fig
+            per_day.setdefault(r["day"], {})[r["category"]] = r["n"]
+    busiest = max((sum(c.values()) for c in per_day.values()), default=1)
+
+    cells = []
+    for dow, row_label in enumerate(["Mon", "", "Wed", "", "Fri", "", "Sun"]):
+        cells.append(f'<span class="rl">{row_label}</span>')
+        for week in range(12):
+            day = start + timedelta(weeks=week, days=dow)
+            if day > today:
+                cells.append('<i class="c future"></i>')
+                continue
+            cats = per_day.get(day)
+            if not cats:
+                cells.append(f'<i class="c" title="{day:%a %d %b} · nothing"></i>')
+                continue
+            total = sum(cats.values())
+            dominant = max(cats, key=cats.get)
+            shade = 0.35 + 0.65 * total / busiest
+            detail = ", ".join(f"{n} {CATEGORY_SOURCE[c]}" for c, n in sorted(cats.items(), key=lambda kv: -kv[1]))
+            cells.append(f'<i class="c" style="background:{COLOR[dominant]};opacity:{shade:.2f}" title="{day:%a %d %b} · {detail}"></i>')
+    cells.append('<span></span>')
+    for week in range(12):
+        monday = start + timedelta(weeks=week)
+        cells.append(f'<span class="wl">{monday:%d %b}</span>' if week % 2 == 0 else '<span class="wl"></span>')
+    legend = "".join(f'<span><i style="background:{COLOR[c]}"></i>{CATEGORY_SOURCE[c]}</span>' for c in COLOR)
+    return f'<div class="hm">{"".join(cells)}</div><div class="legend">{legend}<span>darker = busier day</span></div>'
 
 
 def per_day_chart(days, source) -> go.Figure | None:
@@ -172,9 +202,7 @@ def bar_list(rows: list[tuple[str, int, str]]) -> str:
     )
 
 
-with st.container(border=True):
-    st.html('<div class="ptitle">Last 12 weeks <span>every source, one cell per day</span></div>')
-    st.plotly_chart(heatmap(source), config=NO_MODEBAR)
+st.html('<div class="panel"><h2>Last 12 weeks <span>one cell per day, colored by what dominated</span></h2>' + heatmap_html(source) + '</div>')
 
 
 # ---- timeline -------------------------------------------------------------
@@ -220,8 +248,23 @@ with right:
     st.html('<div class="panel"><h2>Which days I actually work <span>' + (range_label or "7 days") + '</span></h2>'
             + bar_list([(WEEKDAYS[i - 1], dow.get(i, 0), "#aab2c2") for i in range(1, 8)] if dow else []) + '</div>')
 
-    st.html('<div class="panel"><h2>Where it came from <span>' + (range_label or "7 days") + '</span></h2>'
-            + bar_list([(SOURCE_LABEL.get(r["source"], r["source"]), r["n"], COLOR[r["category"]]) for r in q.by_source(days, source)]) + '</div>')
+    UNIT = {"github": "commits", "leetcode": "solved", "todoist": "done", "claude_code": "sessions"}
+    if days is None:
+        st.html('<div class="panel"><h2>Where it came from <span>all time</span></h2>'
+                + bar_list([(SOURCE_LABEL.get(r["source"], r["source"]), r["n"], COLOR[r["category"]]) for r in q.by_source(None, source)]) + '</div>')
+    else:
+        cmp_rows = []
+        for r in q.source_comparison(days, source):
+            top = max(r["current"], r["previous"]) or 1
+            arrow = "▲" if r["current"] > r["previous"] else "▼" if r["current"] < r["previous"] else "="
+            cmp_rows.append(
+                f'<div class="cmp" style="--c:{COLOR[r["category"]]}"><span>{SOURCE_LABEL[r["source"]]}</span>'
+                f'<div class="bars"><div class="bar"><i style="width:{100 * r["current"] / top:.0f}%"></i></div>'
+                f'<div class="bar prev"><i style="width:{100 * r["previous"] / top:.0f}%"></i></div></div>'
+                f'<span class="v">{r["current"]} {UNIT[r["source"]]}<em>{arrow} was {r["previous"]}</em></span></div>'
+            )
+        st.html(f'<div class="panel"><h2>Compared to the previous {range_label.lower()} <span>each source vs itself</span></h2>'
+                + ("".join(cmp_rows) or '<div class="empty">Nothing in either window.</div>') + '</div>')
 
 rows = q.timeline(days, source)
 parts = ['<div class="panel"><h2>Timeline <span>all sources, newest first</span></h2>']
