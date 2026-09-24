@@ -200,7 +200,7 @@ wheels = [
 [[package]]
 name = "digital-life"
 version = "0.1.0"
-source = { virtual = "." }
+source = { editable = "." }
 dependencies = [
     { name = "httpx" },
     { name = "plotly" },
@@ -213,8 +213,8 @@ dependencies = [
 [package.metadata]
 requires-dist = [
     { name = "httpx", specifier = ">=0.28.1" },
-    { name = "plotly", specifier = ">=7.1.0" },
-    { name = "psycopg", extras = ["binary"], specifier = ">=3.3.6" },
+    { name = "plotly", specifier = ">=6.5.2" },
+    { name = "psycopg", extras = ["binary"], specifier = ">=3.3.3" },
     { name = "python-dotenv", specifier = ">=1.2.3" },
     { name = "sqlalchemy", specifier = ">=2.0.54" },
     { name = "streamlit", specifier = ">=1.64.0" },

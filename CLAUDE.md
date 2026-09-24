@@ -41,3 +41,6 @@ Build in milestones (Step 1 setup → Step 2 DB+model → Step 3 GitHub connecto
 After each milestone STOP and use the "STEP COMPLETE" format (What we built / Why / Files changed / How it works / Run this / Expected result / What I learned / Next).
 Give 30-second practical explanations of concepts at the moment they are used. Small meaningful git commits.
 Dashboard aesthetic: minimal, data-focused, slightly nerdy, modern. Numbers always come from the database.
+
+### Learning notes
+After each step, write the "What I learned" content to `learnings/step-N.md` (git-ignored). Keep the STEP COMPLETE report in chat short on that section and point to the file.

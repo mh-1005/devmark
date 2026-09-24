@@ -6,12 +6,18 @@ readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
     "httpx>=0.28.1",
-    "plotly>=7.1.0",
-    "psycopg[binary]>=3.3.6",
+    "plotly>=6.5.2",
+    "psycopg[binary]>=3.3.3",
     "python-dotenv>=1.2.3",
     "sqlalchemy>=2.0.54",
     "streamlit>=1.64.0",
 ]
 
-[tool.uv]
-package = false
+[build-system]
+requires = ["uv_build>=0.12.12,<0.13.0"]
+build-backend = "uv_build"
+
+# Flat layout: the importable package is ./app, not ./src/<name>.
+[tool.uv.build-backend]
+module-name = "app"
+module-root = ""
