@@ -2,7 +2,7 @@
 
 Every function takes the same two filters:
   days    None = all time, 1 = today, 7 = last 7 days (local midnight boundaries)
-  source  None = all sources, or one of "github" / "leetcode" / "todoist" / "claude_code"
+  source  one source name, or a list of allowed names (the connected ones), or None = no filter
 """
 
 import os
@@ -24,9 +24,12 @@ def _where(days: int | None, source: str | None, *extra: str) -> tuple[str, dict
             "timestamp >= (date_trunc('day', now() AT TIME ZONE :tz) - make_interval(days => :back)) AT TIME ZONE :tz"
         )
         params["back"] = days - 1
-    if source:
+    if isinstance(source, str):
         clauses.append("source = :source")
         params["source"] = source
+    elif source is not None:
+        clauses.append("source = ANY(:sources)")  # psycopg turns a Python list into a Postgres array
+        params["sources"] = list(source)
     return ("WHERE " + " AND ".join(clauses)) if clauses else "", params
 
 
@@ -127,7 +130,8 @@ def by_source(days, source) -> list[dict]:
 
 def source_comparison(days: int, source) -> list[dict]:
     """Per source: activity count in the current window vs the same-length window right before it."""
-    src_clause = "AND source = :source" if source else ""
+    src_clause = "AND source = :source" if isinstance(source, str) else "AND source = ANY(:sources)" if source is not None else ""
+    src_params = {"source": source} if isinstance(source, str) else {"sources": list(source)} if source is not None else {}
     return _run(f"""
         WITH bounds AS (
             SELECT (date_trunc('day', now() AT TIME ZONE :tz) - make_interval(days => :back)) AT TIME ZONE :tz AS start
@@ -139,7 +143,7 @@ def source_comparison(days: int, source) -> list[dict]:
         WHERE timestamp >= start - make_interval(days => :days) {src_clause}
         GROUP BY 1, 2
         ORDER BY current DESC
-    """, {"tz": TZ, "back": days - 1, "days": days, **({"source": source} if source else {})})
+    """, {"tz": TZ, "back": days - 1, "days": days, **src_params})
 
 
 def has_mock_rows() -> bool:

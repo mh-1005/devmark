@@ -14,7 +14,6 @@ from app.services.ingestion import ingest
 APP_NAME = "devlog"
 TAGLINE = "What I built, learned, finished, and asked for help with."
 
-SOURCES = {"All": None, "GitHub": "github", "LeetCode": "leetcode", "Todoist": "todoist", "Claude Code": "claude_code"}
 RANGES = {"Today": 1, "7 days": 7, "30 days": 30, "All time": None}
 COLOR = {"BUILD": "#3987e5", "LEARN": "#d95926", "DO": "#199e70", "ASSIST": "#c98500"}
 SOURCE_LABEL = {"github": "GitHub", "leetcode": "LeetCode", "todoist": "Todoist", "claude_code": "Claude Code"}
@@ -97,6 +96,9 @@ html, body, .stApp { font-family: "IBM Plex Sans", system-ui, sans-serif; }
 
 connectors = {cls.source: cls() for cls in ALL_CONNECTORS}  # fresh instances read the current .env
 mock = mock_mode_enabled()
+connected = {src: mock or c.is_configured() for src, c in connectors.items()}
+active = [src for src, ok in connected.items() if ok]          # only these sources appear anywhere
+SOURCES = {"All": None, **{SOURCE_LABEL[src]: src for src in active}}
 
 with st.sidebar:
     st.html('<div class="ptitle">Accounts</div>' + "".join(
@@ -146,14 +148,15 @@ with right:
     range_label = st.pills("Range", list(RANGES), default="7 days", label_visibility="collapsed")
 
 source = SOURCES[source_label or "All"]
+scope = source or active   # one source, or every connected source
 days = RANGES[range_label or "7 days"]
 
 # ---- tiles ----------------------------------------------------------------
 
-b = q.build_summary(days, source)
-l = q.learn_summary(days, source)
-d = q.do_summary(days, source)
-a = q.assist_summary(days, source)
+b = q.build_summary(days, scope)
+l = q.learn_summary(days, scope)
+d = q.do_summary(days, scope)
+a = q.assist_summary(days, scope)
 
 
 def tile(cat: str, src: str, value: str, sub: str, off: bool = False) -> str:
@@ -165,7 +168,6 @@ def off_tile(cat: str, src: str) -> str:
     return tile(cat, src, "—", "Not connected · add it in the sidebar", off=True)
 
 
-connected = {src: mock or c.is_configured() for src, c in connectors.items()}
 
 
 tiles = {
@@ -223,7 +225,7 @@ def heatmap_html(source) -> str:
     for week in range(12):
         monday = start + timedelta(weeks=week)
         cells.append(f'<span class="wl">{monday:%d %b}</span>' if week % 2 == 0 else '<span class="wl"></span>')
-    in_play = [SOURCE_CATEGORY[source]] if source else list(COLOR)
+    in_play = [SOURCE_CATEGORY[s] for s in ([source] if isinstance(source, str) else source)]
     legend = "".join(f'<span><i style="background:{COLOR[c]}"></i>{CATEGORY_SOURCE[c]}</span>' for c in in_play)
     return f'<div class="hm">{"".join(cells)}</div><div class="legend">{legend}<span>darker = busier day</span></div>'
 
@@ -262,7 +264,7 @@ def bar_list(rows: list[tuple[str, int, str]]) -> str:
     )
 
 
-st.html('<div class="panel"><h2>Last 12 weeks <span>one cell per day, colored by what dominated</span></h2>' + heatmap_html(source) + '</div>')
+st.html('<div class="panel"><h2>Last 12 weeks <span>one cell per day, colored by what dominated</span></h2>' + heatmap_html(scope) + '</div>')
 
 
 # ---- timeline -------------------------------------------------------------
@@ -297,24 +299,24 @@ left, right = st.columns([1.3, 1], gap="medium")
 with right:
     with st.container(border=True):
         st.html(f'<div class="ptitle">Activity per day <span>{range_label or "7 days"}</span></div>')
-        fig = per_day_chart(days, source)
+        fig = per_day_chart(days, scope)
         if fig:
             st.plotly_chart(fig, config=NO_MODEBAR)
         else:
             st.html('<div class="empty">Nothing in this window.</div>')
 
     WEEKDAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
-    dow = {r["dow"]: r["n"] for r in q.by_weekday(days, source)}
+    dow = {r["dow"]: r["n"] for r in q.by_weekday(days, scope)}
     st.html('<div class="panel"><h2>Which days I actually work <span>' + (range_label or "7 days") + '</span></h2>'
             + bar_list([(WEEKDAYS[i - 1], dow.get(i, 0), "#aab2c2") for i in range(1, 8)] if dow else []) + '</div>')
 
     UNIT = {"github": "commits", "leetcode": "solved", "todoist": "done", "claude_code": "sessions"}
     if days is None:
         st.html('<div class="panel"><h2>Where it came from <span>all time</span></h2>'
-                + bar_list([(SOURCE_LABEL.get(r["source"], r["source"]), r["n"], COLOR[r["category"]]) for r in q.by_source(None, source)]) + '</div>')
+                + bar_list([(SOURCE_LABEL.get(r["source"], r["source"]), r["n"], COLOR[r["category"]]) for r in q.by_source(None, scope)]) + '</div>')
     else:
         cmp_rows = []
-        for r in q.source_comparison(days, source):
+        for r in q.source_comparison(days, scope):
             top = max(r["current"], r["previous"]) or 1
             arrow = "▲" if r["current"] > r["previous"] else "▼" if r["current"] < r["previous"] else "="
             cmp_rows.append(
@@ -326,7 +328,7 @@ with right:
         st.html(f'<div class="panel"><h2>Compared to the previous {range_label.lower()} <span>each source vs itself</span></h2>'
                 + ("".join(cmp_rows) or '<div class="empty">Nothing in either window.</div>') + '</div>')
 
-rows = q.timeline(days, source)
+rows = q.timeline(days, scope)
 parts = ['<div class="panel"><h2>Timeline <span>all sources, newest first</span></h2>']
 if not rows:
     parts.append('<div class="empty">Nothing in this window. Try a wider range, or run <code>uv run python -m scripts.ingest</code>.</div>')
