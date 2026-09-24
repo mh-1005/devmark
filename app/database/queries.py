@@ -89,3 +89,37 @@ def timeline(days, source, limit: int = 200) -> list[dict]:
         ORDER BY timestamp DESC
         LIMIT :limit
     """, {**p, "limit": limit})
+
+
+# ---- charts ----------------------------------------------------------------
+
+def per_day(days, source) -> list[dict]:
+    """Activity count per local day and category. Days with no activity are simply absent."""
+    where, p = _where(days, source)
+    return _run(f"""
+        SELECT (timestamp AT TIME ZONE :tz)::date AS day, category, count(*) AS n
+        FROM activities {where}
+        GROUP BY 1, 2
+        ORDER BY 1
+    """, p)
+
+
+def by_weekday(days, source) -> list[dict]:
+    """Activity count by ISO weekday (1 = Monday ... 7 = Sunday)."""
+    where, p = _where(days, source)
+    return _run(f"""
+        SELECT extract(isodow FROM timestamp AT TIME ZONE :tz)::int AS dow, count(*) AS n
+        FROM activities {where}
+        GROUP BY 1
+        ORDER BY 1
+    """, p)
+
+
+def by_source(days, source) -> list[dict]:
+    where, p = _where(days, source)
+    return _run(f"""
+        SELECT source, category, count(*) AS n
+        FROM activities {where}
+        GROUP BY 1, 2
+        ORDER BY n DESC
+    """, p)

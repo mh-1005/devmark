@@ -1,6 +1,7 @@
 import html
 from datetime import date, timedelta
 
+import plotly.graph_objects as go
 import streamlit as st
 
 from app.connectors.base import mock_mode_enabled
@@ -20,7 +21,7 @@ st.html("""
 <style>
 @import url("https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap");
 html, body, [class*="st-"] { font-family: "IBM Plex Sans", system-ui, sans-serif; }
-.block-container { max-width: 1140px; padding-top: 2rem; }
+.block-container { max-width: 1140px; padding-top: 4rem; }
 .mono { font-family: "JetBrains Mono", ui-monospace, monospace; }
 .label { font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: #6f788a; font-weight: 500; }
 
@@ -33,7 +34,7 @@ html, body, [class*="st-"] { font-family: "IBM Plex Sans", system-ui, sans-serif
 .hdr .date { font-size: 13px; color: #aab2c2; font-family: "JetBrains Mono", monospace; }
 .pill { font-size: 11px; padding: 3px 8px; border-radius: 4px; background: #2a2114; color: #f5b458; font-weight: 600; letter-spacing: .04em; }
 
-.tiles { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin: 8px 0 18px; }
+.tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; margin: 8px 0 18px; }
 .tile { background: #161a22; border: 1px solid #2a3040; border-top: 3px solid var(--c); border-radius: 8px; padding: 14px 16px 12px; display: grid; gap: 6px; }
 .tile .top { display: flex; justify-content: space-between; align-items: center; }
 .tile .src { font-size: 12px; color: #6f788a; }
@@ -53,6 +54,12 @@ html, body, [class*="st-"] { font-family: "IBM Plex Sans", system-ui, sans-serif
 .ev .title { font-weight: 500; font-size: 14px; }
 .ev .meta { font-size: 12px; color: #6f788a; }
 .ev .meta b { color: #aab2c2; font-weight: 500; }
+.hbar { display: grid; grid-template-columns: 90px 1fr 36px; gap: 10px; align-items: center; font-size: 12px; padding: 4px 0; }
+.hbar .bar { height: 8px; border-radius: 4px; background: #1e232d; overflow: hidden; }
+.hbar .bar i { display: block; height: 100%; border-radius: 4px; background: var(--c); }
+.hbar .v { text-align: right; color: #aab2c2; font-family: "JetBrains Mono", monospace; }
+.ptitle { font-size: 13px; font-weight: 600; display: flex; justify-content: space-between; margin-bottom: 4px; }
+.ptitle span { font-weight: 400; color: #6f788a; font-size: 12px; }
 .empty { color: #6f788a; font-size: 13px; padding: 24px 0; text-align: center; }
 @media (max-width: 800px) { .tiles { grid-template-columns: repeat(2, 1fr); } }
 </style>
@@ -92,12 +99,83 @@ def tile(cat: str, src: str, value: str, sub: str) -> str:
             f'<span class="src">{src}</span></div><div class="val">{value}</div><div class="sub">{sub}</div></div>')
 
 
-st.html('<div class="tiles">' + "".join([
-    tile("BUILD", "GitHub", str(b["commits"]), f'commits · {b["prs"]} pull requests · {b["repos"]} repos'),
-    tile("LEARN", "LeetCode", str(l["problems"]), f'problems · {l["easy"]} easy · {l["medium"]} medium · {l["hard"]} hard'),
-    tile("DO", "Todoist", str(d["tasks"]), f'tasks completed · {d["projects"]} projects'),
-    tile("ASSIST", "Claude Code", f'{a["hours"]:.1f}<small>h</small>', f'{a["sessions"]} sessions · {a["projects"]} projects · {a["prompts"]} prompts'),
-]) + "</div>")
+tiles = {
+    "github": tile("BUILD", "GitHub", str(b["commits"]), f'commits · {b["prs"]} pull requests · {b["repos"]} repos'),
+    "leetcode": tile("LEARN", "LeetCode", str(l["problems"]), f'problems · {l["easy"]} easy · {l["medium"]} medium · {l["hard"]} hard'),
+    "todoist": tile("DO", "Todoist", str(d["tasks"]), f'tasks completed · {d["projects"]} projects'),
+    "claude_code": tile("ASSIST", "Claude Code", f'{a["hours"]:.1f}<small>h</small>', f'{a["sessions"]} sessions · {a["projects"]} projects · {a["prompts"]} prompts'),
+}
+shown = [tiles[source]] if source else list(tiles.values())
+st.html('<div class="tiles">' + "".join(shown) + "</div>")
+
+# ---- charts ---------------------------------------------------------------
+
+PLOT_LAYOUT = dict(
+    paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
+    font=dict(family="IBM Plex Sans, sans-serif", color="#aab2c2", size=12),
+    margin=dict(l=0, r=0, t=8, b=0), showlegend=False, hoverlabel=dict(bgcolor="#1e232d", font_color="#e8ebf1"),
+)
+NO_MODEBAR = {"displayModeBar": False}
+
+
+def heatmap(source) -> go.Figure:
+    """GitHub-style contribution grid: last 12 weeks, one cell per day, shade = activity count."""
+    today = date.today()
+    start = today - timedelta(days=today.weekday() + 7 * 11)  # Monday, 11 weeks back
+    counts: dict[date, int] = {}
+    for r in q.per_day(None, source):
+        if r["day"] >= start:
+            counts[r["day"]] = counts.get(r["day"], 0) + r["n"]
+    weeks = [start + timedelta(weeks=w) for w in range(12)]
+    z, text = [], []
+    for dow in range(7):
+        z.append([counts.get(wk + timedelta(days=dow), 0) if wk + timedelta(days=dow) <= today else None for wk in weeks])
+        text.append([f"{wk + timedelta(days=dow):%a %d %b} · {counts.get(wk + timedelta(days=dow), 0)} activities" for wk in weeks])
+    fig = go.Figure(go.Heatmap(
+        z=z, text=text, hoverinfo="text", xgap=3, ygap=3, showscale=False,
+        colorscale=[[0, "#1e232d"], [0.01, "#1e3a5f"], [1, "#3987e5"]], zmin=0,
+    ))
+    fig.update_layout(**PLOT_LAYOUT, height=150)
+    fig.update_xaxes(tickvals=list(range(12)), ticktext=[f"{w:%d %b}" if i % 2 == 0 else "" for i, w in enumerate(weeks)], showgrid=False, zeroline=False)
+    fig.update_yaxes(tickvals=list(range(7)), ticktext=["Mon", "", "Wed", "", "Fri", "", "Sun"], showgrid=False, zeroline=False, autorange="reversed")
+    return fig
+
+
+def per_day_chart(days, source) -> go.Figure | None:
+    """Stacked bars, one per local day, one segment per category."""
+    rows = q.per_day(days, source)
+    if not rows:
+        return None
+    end = date.today()
+    start = end - timedelta(days=(days or 1) - 1) if days else min(r["day"] for r in rows)
+    span = [start + timedelta(days=i) for i in range((end - start).days + 1)]
+    fig = go.Figure()
+    for cat, color in COLOR.items():
+        by_day = {r["day"]: r["n"] for r in rows if r["category"] == cat}
+        if by_day:
+            fig.add_bar(name=cat.title(), x=span, y=[by_day.get(d, 0) for d in span], marker_color=color,
+                        hovertemplate="%{x|%a %d %b} · %{y} " + cat.lower() + "<extra></extra>")
+    fig.update_layout(**PLOT_LAYOUT, barmode="stack", bargap=0.25, height=220)
+    fig.update_xaxes(showgrid=False, tickformat="%d %b")
+    fig.update_yaxes(gridcolor="#2a3040", zeroline=False, dtick=1 if max(r["n"] for r in rows) < 6 else None)
+    return fig
+
+
+def bar_list(rows: list[tuple[str, int, str]]) -> str:
+    """Horizontal bar list rendered as HTML. rows = [(label, value, color), ...]"""
+    if not rows:
+        return '<div class="empty">Nothing in this window.</div>'
+    top = max(v for _, v, _ in rows) or 1
+    return "".join(
+        f'<div class="hbar" style="--c:{c}"><span>{label}</span><div class="bar"><i style="width:{100 * v / top:.0f}%"></i></div><span class="v">{v}</span></div>'
+        for label, v, c in rows
+    )
+
+
+with st.container(border=True):
+    st.html('<div class="ptitle">Last 12 weeks <span>every source, one cell per day</span></div>')
+    st.plotly_chart(heatmap(source), config=NO_MODEBAR)
+
 
 # ---- timeline -------------------------------------------------------------
 
@@ -126,6 +204,25 @@ def day_label(day: date) -> str:
     return f"{prefix}{day:%a %d %b}"
 
 
+left, right = st.columns([1.3, 1], gap="medium")
+
+with right:
+    with st.container(border=True):
+        st.html(f'<div class="ptitle">Activity per day <span>{range_label or "7 days"}</span></div>')
+        fig = per_day_chart(days, source)
+        if fig:
+            st.plotly_chart(fig, config=NO_MODEBAR)
+        else:
+            st.html('<div class="empty">Nothing in this window.</div>')
+
+    WEEKDAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+    dow = {r["dow"]: r["n"] for r in q.by_weekday(days, source)}
+    st.html('<div class="panel"><h2>Which days I actually work <span>' + (range_label or "7 days") + '</span></h2>'
+            + bar_list([(WEEKDAYS[i - 1], dow.get(i, 0), "#aab2c2") for i in range(1, 8)] if dow else []) + '</div>')
+
+    st.html('<div class="panel"><h2>Where it came from <span>' + (range_label or "7 days") + '</span></h2>'
+            + bar_list([(SOURCE_LABEL.get(r["source"], r["source"]), r["n"], COLOR[r["category"]]) for r in q.by_source(days, source)]) + '</div>')
+
 rows = q.timeline(days, source)
 parts = ['<div class="panel"><h2>Timeline <span>all sources, newest first</span></h2>']
 if not rows:
@@ -145,4 +242,5 @@ for r in rows:
 if current_day is not None:
     parts.append("</div>")
 parts.append("</div>")
-st.html("".join(parts))
+with left:
+    st.html("".join(parts))
