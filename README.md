@@ -86,7 +86,7 @@ Where to get them:
 A source that isn't connected shows a "Not connected" tile and is left out of everything else.
 Nothing is faked unless you ask for it.
 
-**Syncing.** The page syncs on load if the last sync was more than 15 minutes ago, and
+**Syncing.** The page syncs on load if the last sync was more than 5 minutes ago, and
 "Sync now" forces one. From the terminal: `uv run python -m scripts.ingest`. Open the
 dashboard at least weekly: free Todoist accounts keep only about a week of activity log.
 

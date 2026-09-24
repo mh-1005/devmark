@@ -124,7 +124,7 @@ html, body, .stApp {{ font-family: "IBM Plex Sans", system-ui, sans-serif; }}
 
 # ---- auto sync -------------------------------------------------------------
 
-SYNC_EVERY_SECONDS = 15 * 60
+SYNC_EVERY_SECONDS = 5 * 60
 
 
 @st.cache_data(ttl=SYNC_EVERY_SECONDS, show_spinner="Syncing…")
