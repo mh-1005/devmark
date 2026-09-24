@@ -1,5 +1,5 @@
 import html
-from datetime import date, timedelta
+from datetime import date, datetime, time, timedelta
 
 import plotly.graph_objects as go
 import streamlit as st
@@ -133,6 +133,7 @@ NO_MODEBAR = {"displayModeBar": False}
 
 
 CATEGORY_SOURCE = {"BUILD": "GitHub", "LEARN": "LeetCode", "DO": "Todoist", "ASSIST": "Claude Code"}
+SOURCE_CATEGORY = {"github": "BUILD", "leetcode": "LEARN", "todoist": "DO", "claude_code": "ASSIST"}
 
 
 def heatmap_html(source) -> str:
@@ -167,7 +168,8 @@ def heatmap_html(source) -> str:
     for week in range(12):
         monday = start + timedelta(weeks=week)
         cells.append(f'<span class="wl">{monday:%d %b}</span>' if week % 2 == 0 else '<span class="wl"></span>')
-    legend = "".join(f'<span><i style="background:{COLOR[c]}"></i>{CATEGORY_SOURCE[c]}</span>' for c in COLOR)
+    in_play = [SOURCE_CATEGORY[source]] if source else list(COLOR)
+    legend = "".join(f'<span><i style="background:{COLOR[c]}"></i>{CATEGORY_SOURCE[c]}</span>' for c in in_play)
     return f'<div class="hm">{"".join(cells)}</div><div class="legend">{legend}<span>darker = busier day</span></div>'
 
 
@@ -186,7 +188,10 @@ def per_day_chart(days, source) -> go.Figure | None:
             fig.add_bar(name=cat.title(), x=span, y=[by_day.get(d, 0) for d in span], marker_color=color,
                         hovertemplate="%{x|%a %d %b} · %{y} " + cat.lower() + "<extra></extra>")
     fig.update_layout(**PLOT_LAYOUT, barmode="stack", bargap=0.25, height=220)
-    fig.update_xaxes(showgrid=False, tickformat="%d %b")
+    # Explicit ticks: Plotly would otherwise zoom a short window to hours and repeat the same date label.
+    pad = timedelta(hours=12)
+    fig.update_xaxes(showgrid=False, tickformat="%d %b", range=[datetime.combine(start, time.min) - pad, datetime.combine(end, time.min) + pad],
+                     tickvals=span if len(span) <= 14 else None)
     fig.update_yaxes(gridcolor="#2a3040", zeroline=False, dtick=1 if max(r["n"] for r in rows) < 6 else None)
     return fig
 
