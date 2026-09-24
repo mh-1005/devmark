@@ -16,3 +16,6 @@ __pycache__/
 
 # Personal learning notes (not tracked)
 learnings/
+
+# Assistant project brief (local only)
+CLAUDE.md
