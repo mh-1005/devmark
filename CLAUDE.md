@@ -13,7 +13,7 @@
 - Don't generate huge amounts of code at once.
 - Ask before making major scope changes.
 
-## Project: Digital Life Dashboard (one-day MVP)
+## Project: DEVMARK (one-day MVP)
 
 One user connects services, connectors pull a little activity data, it is normalized
 into one `Activity` model, stored in PostgreSQL via SQLAlchemy, and shown in one Streamlit dashboard.
@@ -31,7 +31,7 @@ Each connector: `fetch()` → `normalize()` → list of `Activity`. Keep them is
 `USE_MOCK_DATA=true` switches to realistic mock data. If a real API is hard, say what blocks it, keep the interface, use mock, move on.
 V1 integrations: GitHub, LeetCode, Todoist.
 Decision (2026-09-24): Google Calendar, Goodreads and Spotify are DROPPED from V1 entirely (Spotify now requires Premium for dev apps). No connectors, no mocks for them.
-Project may be renamed and refocused on productivity / computer science; name TBD.
+Name: DEVMARK, tagline "Make your work visible." Every commit, solve, task or session is a "mark" in user-facing text; code keeps the Activity model name.
 
 ### Architecture rules
 Single local user operationally, but don't hardcode a personal identity; schema should allow a user/account link later.

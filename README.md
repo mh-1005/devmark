@@ -1,10 +1,13 @@
-# devlog
+# DEVMARK
 
-> Working title. One dashboard for what you built, learned, finished, and asked for help with.
+**Make your work visible.**
 
-Connect the developer services you already use, pull a little activity data from each,
-normalize it into one `Activity` shape, store it in PostgreSQL, and look at all of it on one
-Streamlit page: four tiles, a 12-week heatmap, a merged timeline, and a few honest charts.
+> Your GitHub commits, LeetCode solves, tasks, and AI coding sessions — brought together in one place.
+
+Every commit, solved problem, completed task, or coding session is a **mark** of work.
+DEVMARK collects them from the services you already use, normalizes them into one shape,
+stores them in PostgreSQL, and shows them on one Streamlit page: four tiles, a 12-week
+heatmap, a merged timeline of marks, and a few honest charts.
 
 Built as a one-day MVP. Small on purpose.
 
@@ -34,7 +37,7 @@ Every source produces the same row:
 | title | `add GitHub connector` |
 | timestamp | `2026-09-24 13:38+00` |
 | duration_seconds | `4800` (Claude Code sessions only) |
-| metadata (JSONB) | `{"repo": "mh-1005/devlog"}` |
+| metadata (JSONB) | `{"repo": "mh-1005/devmark"}` |
 | external_id | the source's own id, so re-ingesting never duplicates |
 
 ## Integrations
@@ -59,9 +62,9 @@ No FastAPI, no Docker, no queue, no scheduler. If it grows, those can come later
 You need PostgreSQL running locally and [uv](https://docs.astral.sh/uv/) installed.
 
 ```bash
-git clone <this repo> && cd <folder>
+git clone <this repo> && cd devmark
 uv sync                                   # creates .venv and installs everything
-createdb digital_life                     # or: psql -c "CREATE DATABASE digital_life"
+createdb devmark                          # or: psql -c "CREATE DATABASE devmark"
 cp .env.example .env                      # then set TIMEZONE, leave the rest for the sidebar
 uv run python -m scripts.init_db          # creates the table
 uv run streamlit run app/dashboard.py
@@ -99,7 +102,7 @@ the sidebar's Save button reloads it live.
 
 | variable | purpose |
 |---|---|
-| `DATABASE_URL` | SQLAlchemy URL, e.g. `postgresql+psycopg://localhost:5432/digital_life` |
+| `DATABASE_URL` | SQLAlchemy URL, e.g. `postgresql+psycopg://localhost:5432/devmark` |
 | `TIMEZONE` | IANA name used for day boundaries and the timeline, e.g. `Asia/Karachi` |
 | `USE_MOCK_DATA` | `true` makes every connector return fake data. Prefer the seeder. |
 | `GITHUB_TOKEN`, `GITHUB_USERNAME` | GitHub |

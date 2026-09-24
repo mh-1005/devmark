@@ -1,7 +1,7 @@
 [project]
-name = "digital-life"
+name = "devmark"
 version = "0.1.0"
-description = "One dashboard for everything you've been doing across your digital services."
+description = "Make your work visible. GitHub, LeetCode, Todoist and AI coding sessions on one dashboard."
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [

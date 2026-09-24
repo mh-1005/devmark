@@ -12,8 +12,8 @@ from app.connectors.base import mock_mode_enabled
 from app.database import queries as q
 from app.services.ingestion import ingest
 
-APP_NAME = "devlog"
-TAGLINE = "What I built, learned, finished, and asked for help with."
+APP_NAME = "DEVMARK"
+TAGLINE = "Make your work visible."
 
 RANGES = {"Today": 1, "7 days": 7, "30 days": 30, "All time": None}
 PALETTES = {
@@ -175,14 +175,14 @@ sync_results = auto_sync()
 if forced:
     errors = [f"{SOURCE_LABEL[r['source']]}: {r['error'][:80]}" for r in sync_results if r["mode"] == "error"]
     new = sum(r["inserted"] for r in sync_results)
-    st.toast(f"Synced · {new} new" if not errors else "Sync finished with errors: " + "; ".join(errors))
+    st.toast(f"Synced · {new} new marks" if not errors else "Sync finished with errors: " + "; ".join(errors))
 
 # ---- header ---------------------------------------------------------------
 
 mock_pill = '<span class="pill">● INCLUDES MOCK DATA</span>' if (mock or q.has_mock_rows()) else ""
 st.html(f"""
 <div class="hdr">
-  <div><h1>{APP_NAME}<span>_</span></h1><p>{TAGLINE}</p></div>
+  <div><h1>{APP_NAME}</h1><p>{TAGLINE}</p></div>
   <div class="right"><div class="date">{date.today():%a %d %b %Y}</div>{mock_pill}</div>
 </div>
 """)
@@ -262,7 +262,7 @@ def heatmap_html(source) -> str:
                 continue
             cats = per_day.get(day)
             if not cats:
-                cells.append(f'<i class="c" title="{day:%a %d %b} · nothing"></i>')
+                cells.append(f'<i class="c" title="{day:%a %d %b} · no marks"></i>')
                 continue
             total = sum(cats.values())
             dominant = max(cats, key=cats.get)
@@ -312,7 +312,7 @@ def bar_list(rows: list[tuple[str, int, str]]) -> str:
     )
 
 
-st.html('<div class="panel"><h2>Last 12 weeks <span>one cell per day, colored by what dominated</span></h2>' + heatmap_html(scope) + '</div>')
+st.html('<div class="panel"><h2>Last 12 weeks <span>one cell per day, coloured by the kind of mark that led</span></h2>' + heatmap_html(scope) + '</div>')
 
 
 # ---- timeline -------------------------------------------------------------
@@ -376,9 +376,9 @@ with right:
                 + ("".join(cmp_rows) or '<div class="empty">Nothing in either window.</div>') + '</div>')
 
 rows = q.timeline(days, scope)
-parts = ['<div class="panel"><h2>Timeline <span>all sources, newest first</span></h2>']
+parts = ['<div class="panel"><h2>Marks <span>every source, newest first</span></h2>']
 if not rows:
-    parts.append('<div class="empty">Nothing in this window. Try a wider range, or run <code>uv run python -m scripts.ingest</code>.</div>')
+    parts.append('<div class="empty">No marks in this window. Try a wider range, or sync.</div>')
 current_day = None
 for r in rows:
     day = r["local_ts"].date()
