@@ -4,6 +4,7 @@ from datetime import date, datetime, time, timedelta
 
 import plotly.graph_objects as go
 import streamlit as st
+from streamlit.runtime.scriptrunner import get_script_run_ctx
 
 from app.config import save_env
 from app.connectors import ALL_CONNECTORS
@@ -26,11 +27,20 @@ PALETTES = {
 
 
 def theme_type() -> str:
-    """"light" or "dark", whichever the viewer chose in Streamlit's ⋮ → Settings (or their system)."""
+    """"light" or "dark", whichever the viewer chose in Streamlit's ⋮ → Settings (or their system).
+
+    On a session's first run Streamlit does not know the theme yet and reports None. We rerun
+    once (a few ms) so the second run has the real value; without this, every first load would
+    render in the fallback colour.
+    """
     try:
-        return st.context.theme.type or "dark"
+        kind = st.context.theme.type
     except Exception:  # noqa: BLE001  (not inside a Streamlit session, e.g. tests)
         return "dark"
+    if kind is None and get_script_run_ctx() is not None and not st.session_state.get("_theme_probe"):
+        st.session_state["_theme_probe"] = True
+        st.rerun()
+    return kind or "dark"
 
 
 T = PALETTES[theme_type()]
@@ -156,7 +166,7 @@ with st.sidebar:
         st.session_state["force_sync"] = True
         st.rerun()
     st.caption(f"Syncs automatically every {SYNC_EVERY_SECONDS // 60} minutes while open.")
-    st.caption("Light or dark: ⋮ menu → Settings → theme.")
+    st.caption("Light or dark: ⋮ menu → Settings → theme, then refresh the page.")
 
 forced = st.session_state.pop("force_sync", False)
 if forced:
