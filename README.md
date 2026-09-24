@@ -1,5 +1,10 @@
 # DEVMARK
 
+![Python](https://img.shields.io/badge/python-3.12-3776AB?logo=python&logoColor=white)
+![Streamlit](https://img.shields.io/badge/streamlit-dashboard-FF4B4B?logo=streamlit&logoColor=white)
+![PostgreSQL](https://img.shields.io/badge/postgresql-storage-4169E1?logo=postgresql&logoColor=white)
+![License](https://img.shields.io/badge/license-MIT-green)
+
 **Make your work visible.**
 
 > Your GitHub commits, LeetCode solves, finished tasks and AI coding sessions, brought together on one page.
@@ -60,7 +65,7 @@ Where to get each credential:
 The page syncs automatically every 5 minutes while open. From the terminal: `uv run python -m scripts.ingest`.
 Open the dashboard at least weekly; free Todoist accounts keep about a week of activity log.
 
-**No accounts yet?** Seed fake data to see the dashboard filled:
+💡 **No accounts yet?** Seed fake data to see the dashboard filled:
 
 ```bash
 uv run python -m scripts.seed_mock          # add
@@ -81,7 +86,7 @@ All settings live in `.env` (git-ignored). `.env.example` lists them.
 | `CLAUDE_PROJECTS_DIR` | only if your Claude Code logs are not in `~/.claude/projects` |
 | `USE_MOCK_DATA` | `true` makes every connector return fake data |
 
-## Privacy
+## 🔒 Privacy
 
 Only titles, timestamps, counts and project or repo names are stored. Never conversation text,
 task descriptions or code. Tokens stay in `.env` and are never displayed. Nothing leaves your machine.
@@ -90,6 +95,8 @@ task descriptions or code. Tokens stay in `.env` and are never displayed. Nothin
 
 Python 3.12 · uv · PostgreSQL · SQLAlchemy · Streamlit · Plotly · httpx
 
-## License
+## 📄 License
 
-[MIT](LICENSE)
+DEVMARK is released under the [MIT License](LICENSE). You are free to use, copy, modify and
+distribute it, including in commercial projects, as long as the original copyright and license
+notice are kept. The software is provided as is, without warranty of any kind.
