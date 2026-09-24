@@ -1,4 +1,9 @@
-"""Todoist → DO. Completed tasks via the Todoist API v1."""
+"""Todoist → DO. Task completions read from the Todoist activity log (API v1).
+
+Why the activity log and not the "completed tasks" endpoint: completing a recurring task
+("water plants, every day") does not mark it completed, it reschedules it. Only the activity
+log records every tick, one-off and recurring alike.
+"""
 
 import os
 import random
@@ -10,7 +15,7 @@ from app.connectors.base import BaseConnector
 from app.database.models import Activity, Category
 
 API = "https://api.todoist.com/api/v1"
-DAYS_BACK = 84  # the completed-tasks endpoint allows at most a 3-month window
+MAX_PAGES = 10  # 100 events per page; free accounts only keep about a week of log anyway
 
 
 class TodoistConnector(BaseConnector):
@@ -24,46 +29,50 @@ class TodoistConnector(BaseConnector):
         return bool(self.token)
 
     def fetch(self) -> list[dict]:
-        now = datetime.now(timezone.utc)
-        params = {
-            "since": (now - timedelta(days=DAYS_BACK)).strftime("%Y-%m-%dT%H:%M:%SZ"),
-            "until": now.strftime("%Y-%m-%dT%H:%M:%SZ"),
-            "limit": 200,
-        }
-        with httpx.Client(base_url=API, headers={"Authorization": f"Bearer {self.token}"}, timeout=20) as client:
+        headers = {"Authorization": f"Bearer {self.token}"}
+        with httpx.Client(base_url=API, headers=headers, timeout=20) as client:
             projects = {p["id"]: p["name"] for p in self._paged(client, "/projects", {})}
-            tasks = self._paged(client, "/tasks/completed/by_completion_date", params)
+            events = self._paged(client, "/activities", {"object_type": "item", "event_type": "completed", "limit": 100})
         # Attach the project name now so normalize() needs no lookup table.
-        return [{**t, "project_name": projects.get(t.get("project_id"), "Inbox")} for t in tasks]
+        return [{**e, "project_name": projects.get(e.get("parent_project_id"), "Inbox")} for e in events]
 
     @staticmethod
     def _paged(client: httpx.Client, path: str, params: dict) -> list[dict]:
         """Todoist v1 pages with a cursor: keep requesting until next_cursor is null."""
         items: list[dict] = []
         cursor = None
-        while True:
+        for _ in range(MAX_PAGES):
             resp = client.get(path, params={**params, **({"cursor": cursor} if cursor else {})})
             resp.raise_for_status()
             body = resp.json()
-            items.extend(body.get("items") or body.get("results") or [])
+            items.extend(body.get("results") or body.get("items") or [])
             cursor = body.get("next_cursor")
             if not cursor:
-                return items
+                break
+        return items
 
     def normalize(self, raw: list[dict]) -> list[Activity]:
-        return [
-            Activity(
-                source=self.source,
-                category=self.category,
-                activity_type="task_completed",
-                title=t["content"][:255],
-                timestamp=datetime.fromisoformat(t["completed_at"]),
-                # Recurring tasks reuse one id across completions, so include the time.
-                external_id=f"{t['id']}-{t['completed_at']}",
-                meta={"project": t["project_name"], "labels": t.get("labels", []), "due": (t.get("due") or {}).get("date")},
+        out: list[Activity] = []
+        seen: set[tuple[str, object]] = set()
+        for e in raw:
+            ts = datetime.fromisoformat(e["event_date"])
+            # A task counts once per day: ticking, un-ticking and re-ticking is one completion.
+            key = (e["object_id"], ts.date())
+            if key in seen:
+                continue
+            seen.add(key)
+            out.append(
+                Activity(
+                    source=self.source,
+                    category=self.category,
+                    activity_type="task_completed",
+                    title=((e.get("extra_data") or {}).get("content") or "Task")[:255],
+                    timestamp=ts,
+                    external_id=e["id"],  # the log event id: unique per completion, stable across runs
+                    meta={"project": e["project_name"], "task_id": e["object_id"]},
+                )
             )
-            for t in raw
-        ]
+        return out
 
     def mock(self) -> list[Activity]:
         rng = random.Random(11)
@@ -86,7 +95,7 @@ class TodoistConnector(BaseConnector):
                     title=rng.choice(tasks[project]),
                     timestamp=now - timedelta(days=rng.randint(0, 20), hours=rng.randint(7, 23), minutes=rng.randint(0, 59)),
                     external_id=f"mock-td-{i}",
-                    meta={"project": project, "labels": rng.choice([[], ["focus"], ["quick"]]), "due": None},
+                    meta={"project": project, "task_id": f"mock-task-{i}"},
                 )
             )
         return out
