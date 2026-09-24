@@ -1,12 +1,91 @@
-"""Read queries used by the dashboard. Keep them small and readable."""
+"""Dashboard queries, written as SQL on purpose so the analytics stay readable.
 
-from sqlalchemy import select
+Every function takes the same two filters:
+  days    None = all time, 1 = today, 7 = last 7 days (local midnight boundaries)
+  source  None = all sources, or one of "github" / "leetcode" / "todoist" / "claude_code"
+"""
 
-from app.database.database import SessionLocal
-from app.database.models import Activity
+import os
+
+from sqlalchemy import text
+
+from app.database.database import engine
+
+TZ = os.getenv("TIMEZONE", "UTC")
 
 
-def get_recent_activities(limit: int = 50) -> list[Activity]:
-    with SessionLocal() as session:
-        stmt = select(Activity).order_by(Activity.timestamp.desc()).limit(limit)
-        return list(session.scalars(stmt))
+def _where(days: int | None, source: str | None, *extra: str) -> tuple[str, dict]:
+    """Build the WHERE clause once so every query filters the same way."""
+    clauses = list(extra)
+    params: dict = {"tz": TZ}
+    if days is not None:
+        # Local midnight (days-1) days ago, converted back to an absolute instant.
+        clauses.append(
+            "timestamp >= (date_trunc('day', now() AT TIME ZONE :tz) - make_interval(days => :back)) AT TIME ZONE :tz"
+        )
+        params["back"] = days - 1
+    if source:
+        clauses.append("source = :source")
+        params["source"] = source
+    return ("WHERE " + " AND ".join(clauses)) if clauses else "", params
+
+
+def _run(sql: str, params: dict) -> list[dict]:
+    with engine.connect() as conn:
+        return [dict(row) for row in conn.execute(text(sql), params).mappings()]
+
+
+# ---- tiles -----------------------------------------------------------------
+
+def build_summary(days, source) -> dict:
+    where, p = _where(days, source, "category = 'BUILD'")
+    return _run(f"""
+        SELECT count(*) FILTER (WHERE activity_type = 'commit')        AS commits,
+               count(*) FILTER (WHERE activity_type = 'pull_request')  AS prs,
+               count(DISTINCT metadata->>'repo')                       AS repos
+        FROM activities {where}
+    """, p)[0]
+
+
+def learn_summary(days, source) -> dict:
+    where, p = _where(days, source, "category = 'LEARN'")
+    return _run(f"""
+        SELECT count(*)                                                   AS problems,
+               count(*) FILTER (WHERE metadata->>'difficulty' = 'Easy')   AS easy,
+               count(*) FILTER (WHERE metadata->>'difficulty' = 'Medium') AS medium,
+               count(*) FILTER (WHERE metadata->>'difficulty' = 'Hard')   AS hard
+        FROM activities {where}
+    """, p)[0]
+
+
+def do_summary(days, source) -> dict:
+    where, p = _where(days, source, "category = 'DO'")
+    return _run(f"""
+        SELECT count(*)                            AS tasks,
+               count(DISTINCT metadata->>'project') AS projects
+        FROM activities {where}
+    """, p)[0]
+
+
+def assist_summary(days, source) -> dict:
+    where, p = _where(days, source, "category = 'ASSIST'")
+    return _run(f"""
+        SELECT count(*)                                            AS sessions,
+               coalesce(sum(duration_seconds), 0) / 3600.0         AS hours,
+               count(DISTINCT metadata->>'project')                AS projects,
+               coalesce(sum((metadata->>'user_messages')::int), 0) AS prompts
+        FROM activities {where}
+    """, p)[0]
+
+
+# ---- timeline --------------------------------------------------------------
+
+def timeline(days, source, limit: int = 200) -> list[dict]:
+    where, p = _where(days, source)
+    return _run(f"""
+        SELECT timestamp AT TIME ZONE :tz AS local_ts,
+               source, category, activity_type, title, duration_seconds, metadata
+        FROM activities {where}
+        ORDER BY timestamp DESC
+        LIMIT :limit
+    """, {**p, "limit": limit})
