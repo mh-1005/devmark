@@ -1,0 +1,17 @@
+[project]
+name = "digital-life"
+version = "0.1.0"
+description = "One dashboard for everything you've been doing across your digital services."
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "httpx>=0.28.1",
+    "plotly>=7.1.0",
+    "psycopg[binary]>=3.3.6",
+    "python-dotenv>=1.2.3",
+    "sqlalchemy>=2.0.54",
+    "streamlit>=1.64.0",
+]
+
+[tool.uv]
+package = false
