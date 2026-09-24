@@ -2,140 +2,87 @@
 
 **Make your work visible.**
 
-> Your GitHub commits, LeetCode solves, tasks, and AI coding sessions — brought together in one place.
+> Your GitHub commits, LeetCode solves, finished tasks and AI coding sessions, brought together on one page.
 
-Every commit, solved problem, completed task, or coding session is a **mark** of work.
-DEVMARK collects them from the services you already use, normalizes them into one shape,
-stores them in PostgreSQL, and shows them on one Streamlit page: four tiles, a 12-week
-heatmap, a merged timeline of marks, and a few honest charts.
+Every commit, solved problem, completed task or coding session is a **mark** of work.
+Those marks live in four different apps, each with its own API, its own idea of time and its own
+shape of data. DEVMARK pulls them out, normalizes them into one row shape, stores them in
+PostgreSQL and shows them on a single Streamlit page.
 
-Built as a one-day MVP. Small on purpose.
+![DEVMARK dashboard](docs/dashboard-dark.png)
 
-## Architecture
-
-```text
-GitHub · LeetCode · Todoist · Claude Code
-              ↓
-      app/connectors/      one file per source: fetch() → normalize() → [Activity]
-              ↓
-      app/services/ingestion.py   INSERT ... ON CONFLICT DO NOTHING (safe to re-run)
-              ↓
-      PostgreSQL            one table: activities
-              ↓
-      app/database/queries.py     plain SQL for the analytics
-              ↓
-      app/dashboard.py      Streamlit + a little Plotly
-```
-
-Every source produces the same row:
-
-| column | example |
+| Source | Shows |
 |---|---|
-| source | `github` |
-| category | `BUILD` |
-| activity_type | `commit` |
-| title | `add GitHub connector` |
-| timestamp | `2026-09-24 13:38+00` |
-| duration_seconds | `4800` (Claude Code sessions only) |
-| metadata (JSONB) | `{"repo": "mh-1005/devmark"}` |
-| external_id | the source's own id, so re-ingesting never duplicates |
+| GitHub | commits and pull requests you authored |
+| LeetCode | accepted submissions with difficulty and language |
+| Todoist | completed tasks with project |
+| Claude Code | one row per local session: active time, prompt count |
 
-## Integrations
+## Requirements
 
-| Source | Category | What it records | How it connects |
-|---|---|---|---|
-| GitHub | Build | commits and pull requests you authored | fine-grained token, read-only |
-| LeetCode | Learn | accepted submissions with difficulty and language | public username, no token |
-| Todoist | Do | every task completion, recurring ones included | API token |
-| Claude Code | Assist | one row per local session: active time, prompt count | reads `~/.claude/projects`, no token |
+- [uv](https://docs.astral.sh/uv/)
+- PostgreSQL, running locally
+  - macOS: `brew install postgresql@18 && brew services start postgresql@18`
+  - Ubuntu/Debian: `sudo apt install postgresql && sudo -u postgres createuser -s $USER`
+  - Windows: installer from [postgresql.org](https://www.postgresql.org/download/windows/)
 
-Adding a source is one file in `app/connectors/` plus one line in `app/connectors/__init__.py`.
-
-## Tech stack
-
-Python 3.12 · uv · PostgreSQL · SQLAlchemy 2 · Streamlit · Plotly · httpx · python-dotenv
-
-No FastAPI, no Docker, no queue, no scheduler. If it grows, those can come later.
-
-## Setup
-
-You need PostgreSQL running locally and [uv](https://docs.astral.sh/uv/) installed.
+## Setup (once)
 
 ```bash
-git clone <this repo> && cd devmark
-uv sync                                   # creates .venv and installs everything
-createdb devmark                          # or: psql -c "CREATE DATABASE devmark"
-cp .env.example .env                      # then set TIMEZONE, leave the rest for the sidebar
-uv run python -m scripts.init_db          # creates the table
-uv run streamlit run app/dashboard.py
+git clone https://github.com/mh-1005/devmark.git
+cd devmark
+uv sync
+createdb devmark
+cp .env.example .env                # set TIMEZONE, leave the tokens empty
+uv run python -m scripts.init_db
 ```
 
-**No accounts yet?** Seed fake data and look around:
+## Run
+
+```bash
+uv run devmark
+```
+
+Opens at `http://localhost:8501`. Your data stays in the database between runs.
+
+## Connect accounts
+
+Open the sidebar, paste your tokens under "Connect accounts", click Save, then "Sync now".
+
+- GitHub: Settings → Developer settings → Fine-grained tokens. Read-only `Contents` and `Pull requests`.
+- LeetCode: your username from `leetcode.com/u/<username>/`.
+- Todoist: Settings → Integrations → Developer → API token.
+- Claude Code: nothing to do. It reads `~/.claude/projects`.
+
+The page syncs automatically every 5 minutes while open. From the terminal: `uv run python -m scripts.ingest`.
+Open the dashboard at least weekly; free Todoist accounts keep about a week of activity log.
+
+**No accounts yet?** Seed fake data to see the dashboard filled:
 
 ```bash
 uv run python -m scripts.seed_mock          # add
-uv run python -m scripts.seed_mock --clear  # remove when you connect real accounts
+uv run python -m scripts.seed_mock --clear  # remove
 ```
 
-**Connecting accounts.** Open the sidebar, paste your tokens under "Connect accounts", click
-Save, then "Sync now". Tokens are written to `.env` on your machine and never shown again.
-Where to get them:
+## Configuration
 
-- GitHub: Settings → Developer settings → Fine-grained tokens. Read-only `Contents` and `Pull requests`.
-- LeetCode: just your username from `leetcode.com/u/<username>/`.
-- Todoist: Settings → Integrations → Developer → API token.
-- Claude Code: nothing to do. It finds `~/.claude/projects` on its own.
-
-A source that isn't connected shows a "Not connected" tile and is left out of everything else.
-Nothing is faked unless you ask for it.
-
-**Syncing.** The page syncs on load if the last sync was more than 5 minutes ago, and
-"Sync now" forces one. From the terminal: `uv run python -m scripts.ingest`. Open the
-dashboard at least weekly: free Todoist accounts keep only about a week of activity log.
-
-Editing `.env` by hand while the app is running is not picked up until you restart it;
-the sidebar's Save button reloads it live.
-
-## Environment variables
-
-`.env.example` lists every variable. Copy it to `.env`, which is git-ignored.
+All settings live in `.env` (git-ignored). `.env.example` lists them.
 
 | variable | purpose |
 |---|---|
-| `DATABASE_URL` | SQLAlchemy URL, e.g. `postgresql+psycopg://localhost:5432/devmark` |
-| `TIMEZONE` | IANA name used for day boundaries and the timeline, e.g. `Asia/Karachi` |
-| `USE_MOCK_DATA` | `true` makes every connector return fake data. Prefer the seeder. |
+| `DATABASE_URL` | e.g. `postgresql+psycopg://localhost:5432/devmark` |
+| `TIMEZONE` | IANA name for day boundaries, e.g. `Asia/Karachi` |
 | `GITHUB_TOKEN`, `GITHUB_USERNAME` | GitHub |
 | `LEETCODE_USERNAME` | LeetCode |
 | `TODOIST_API_TOKEN` | Todoist |
 | `CLAUDE_PROJECTS_DIR` | only if your Claude Code logs are not in `~/.claude/projects` |
+| `USE_MOCK_DATA` | `true` makes every connector return fake data |
 
 ## Privacy
 
-Only what the dashboard shows is stored: titles, timestamps, counts, project or repo names.
-Never conversation text, task descriptions, or code. Tokens live in `.env` and are never
-rendered. Each connector requests the smallest permission that works.
+Only titles, timestamps, counts and project or repo names are stored. Never conversation text,
+task descriptions or code. Tokens stay in `.env` and are never displayed. Nothing leaves your machine.
 
-## What I learned building it
+## Stack
 
-- **Connector pattern.** `fetch()` talks to the network, `normalize()` is a pure function, `mock()` is
-  the same shape faked. Every source, same three methods.
-- **Identity matters more than schema.** Each connector must decide what counts as one activity
-  and what its stable id is. Recurring Todoist tasks and resumed Claude Code sessions both bit me here.
-- **Idempotent ingestion.** `INSERT ... ON CONFLICT DO NOTHING RETURNING id` means re-running is
-  always safe and tells you what was actually new.
-- **Timezones in SQL.** Rows are UTC; "today" is computed with `AT TIME ZONE` so it's *your* today.
-- **One JSONB column beats six side tables** for an MVP. `metadata->>'difficulty'` in a `FILTER`
-  clause does the rest.
-- **Don't compare unlike units.** Commits, problems, tasks and hours don't belong on one bar chart.
-  Compare each source with its own previous period instead.
-- **Streamlit gotchas.** `st.markdown` runs HTML through Markdown (blank lines end the block);
-  use `st.html`. Date axes with few points need explicit ticks and range.
-
-## Not in V1 (and why)
-
-- Google Calendar, Goodreads, Spotify: OAuth setup or Premium requirements that didn't fit one day.
-- "Log in with GitHub" buttons: only worth it for a single hosted instance; for a clone-and-run app
-  each person would need their own OAuth app, which is more setup than a token.
-- Multi-user: the table has a nullable `user_id` ready for it, nothing else yet.
-- Scheduled sync, WakaTime, Codeforces, Anki: good V2 candidates.
+Python 3.12 · uv · PostgreSQL · SQLAlchemy · Streamlit · Plotly · httpx
