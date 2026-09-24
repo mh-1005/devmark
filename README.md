@@ -97,4 +97,4 @@ Python 3.12 · uv · PostgreSQL · SQLAlchemy · Streamlit · Plotly · httpx
 
 ## 📄 License
 
-[MIT](LICENSE). Use it however you like, just keep the copyright notice.
+[MIT](LICENSE). You are free to use, modify and share it. Just keep the copyright notice.
