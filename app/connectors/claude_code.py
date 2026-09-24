@@ -27,6 +27,11 @@ class ClaudeCodeConnector(BaseConnector):
     def is_configured(self) -> bool:
         return self.projects_dir.is_dir()
 
+    def status(self) -> str:
+        if not self.is_configured():
+            return "no ~/.claude/projects folder"
+        return f"local · {sum(1 for _ in self.projects_dir.glob('*/*.jsonl'))} session files"
+
     def fetch(self) -> list[dict]:
         sessions = []
         for path in self.projects_dir.glob("*/*.jsonl"):

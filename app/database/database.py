@@ -2,11 +2,10 @@
 
 import os
 
-from dotenv import load_dotenv
 from sqlalchemy import create_engine
 from sqlalchemy.orm import DeclarativeBase, sessionmaker
 
-load_dotenv()
+import app.config  # noqa: F401  (importing it loads .env)
 
 DATABASE_URL = os.environ["DATABASE_URL"]
 

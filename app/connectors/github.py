@@ -24,6 +24,9 @@ class GitHubConnector(BaseConnector):
     def is_configured(self) -> bool:
         return bool(self.token and self.username)
 
+    def status(self) -> str:
+        return f"connected · {self.username}" if self.is_configured() else "not connected"
+
     # ---- fetch -----------------------------------------------------------
 
     def fetch(self) -> list[dict]:

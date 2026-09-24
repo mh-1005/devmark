@@ -28,6 +28,9 @@ class LeetCodeConnector(BaseConnector):
     def is_configured(self) -> bool:
         return bool(self.username)
 
+    def status(self) -> str:
+        return f"connected · {self.username}" if self.is_configured() else "not connected"
+
     def fetch(self) -> list[dict]:
         headers = {"Content-Type": "application/json", "Referer": "https://leetcode.com"}
         with httpx.Client(headers=headers, timeout=20) as client:

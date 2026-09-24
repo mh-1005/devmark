@@ -3,14 +3,10 @@
 Run:  uv run python -m scripts.ingest
 """
 
-from app.connectors.claude_code import ClaudeCodeConnector
-from app.connectors.github import GitHubConnector
-from app.connectors.leetcode import LeetCodeConnector
-from app.connectors.todoist import TodoistConnector
+from app.connectors import ALL_CONNECTORS
 from app.database.database import init_db
-from app.services.ingestion import ingest
-
-CONNECTORS = [GitHubConnector(), LeetCodeConnector(), TodoistConnector(), ClaudeCodeConnector()]
+from app.services.ingestion import describe, ingest
 
 init_db()
-ingest(CONNECTORS)
+for result in ingest([cls() for cls in ALL_CONNECTORS]):
+    print(describe(result))
