@@ -15,80 +15,100 @@ APP_NAME = "devlog"
 TAGLINE = "What I built, learned, finished, and asked for help with."
 
 RANGES = {"Today": 1, "7 days": 7, "30 days": 30, "All time": None}
-COLOR = {"BUILD": "#3987e5", "LEARN": "#d95926", "DO": "#199e70", "ASSIST": "#c98500"}
+PALETTES = {
+    "dark": dict(bg="#0f1218", surface="#161a22", surface2="#1e232d", line="#2a3040", muted="#3a4152",
+                 text="#e8ebf1", text2="#aab2c2", text3="#6f788a", mock="#f5b458", mock_bg="#2a2114",
+                 BUILD="#3987e5", LEARN="#d95926", DO="#199e70", ASSIST="#c98500"),
+    "light": dict(bg="#f4f5f7", surface="#ffffff", surface2="#eceef2", line="#e1e4ea", muted="#c9ced8",
+                  text="#14171c", text2="#4d5563", text3="#8a93a3", mock="#b45309", mock_bg="#fff4e0",
+                  BUILD="#2a78d6", LEARN="#eb6834", DO="#1baf7a", ASSIST="#eda100"),
+}
+
+
+def theme_type() -> str:
+    """"light" or "dark", whichever the viewer chose in Streamlit's ⋮ → Settings (or their system)."""
+    try:
+        return st.context.theme.type or "dark"
+    except Exception:  # noqa: BLE001  (not inside a Streamlit session, e.g. tests)
+        return "dark"
+
+
+T = PALETTES[theme_type()]
+COLOR = {cat: T[cat] for cat in ("BUILD", "LEARN", "DO", "ASSIST")}
 SOURCE_LABEL = {"github": "GitHub", "leetcode": "LeetCode", "todoist": "Todoist", "claude_code": "Claude Code"}
 
 st.set_page_config(page_title=APP_NAME, page_icon="◎", layout="wide")
 
-st.html("""
+st.html(f"""
 <style>
+:root {{ {" ".join(f"--{k}: {v};" for k, v in T.items())} }}
 @import url("https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap");
-html, body, .stApp { font-family: "IBM Plex Sans", system-ui, sans-serif; }
+html, body, .stApp {{ font-family: "IBM Plex Sans", system-ui, sans-serif; }}
 /* Streamlit draws its icons with a ligature font; keep our font away from them. */
-[data-testid="stIconMaterial"], .material-symbols-rounded, [class*="material-symbols"] { font-family: "Material Symbols Rounded" !important; }
-.block-container { max-width: 1140px; padding-top: 4rem; }
-.mono { font-family: "JetBrains Mono", ui-monospace, monospace; }
-.label { font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: #6f788a; font-weight: 500; }
+[data-testid="stIconMaterial"], .material-symbols-rounded, [class*="material-symbols"] {{ font-family: "Material Symbols Rounded" !important; }}
+.block-container {{ max-width: 1140px; padding-top: 4rem; }}
+.mono {{ font-family: "JetBrains Mono", ui-monospace, monospace; }}
+.label {{ font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--text3); font-weight: 500; }}
 
-.hdr { display: flex; justify-content: space-between; align-items: flex-end; gap: 16px; flex-wrap: wrap;
-       border-bottom: 1px solid #2a3040; padding-bottom: 14px; margin-bottom: 14px; }
-.hdr h1 { margin: 0; font-size: 28px; font-weight: 600; font-family: "JetBrains Mono", monospace; }
-.hdr h1 span { color: #6f788a; font-weight: 400; }
-.hdr p { margin: 4px 0 0; color: #aab2c2; font-size: 14px; }
-.hdr .right { text-align: right; display: grid; gap: 6px; justify-items: end; }
-.hdr .date { font-size: 13px; color: #aab2c2; font-family: "JetBrains Mono", monospace; }
-.pill { font-size: 11px; padding: 3px 8px; border-radius: 4px; background: #2a2114; color: #f5b458; font-weight: 600; letter-spacing: .04em; }
+.hdr {{ display: flex; justify-content: space-between; align-items: flex-end; gap: 16px; flex-wrap: wrap;
+       border-bottom: 1px solid var(--line); padding-bottom: 14px; margin-bottom: 14px; }}
+.hdr h1 {{ margin: 0; font-size: 28px; font-weight: 600; font-family: "JetBrains Mono", monospace; }}
+.hdr h1 span {{ color: var(--text3); font-weight: 400; }}
+.hdr p {{ margin: 4px 0 0; color: var(--text2); font-size: 14px; }}
+.hdr .right {{ text-align: right; display: grid; gap: 6px; justify-items: end; }}
+.hdr .date {{ font-size: 13px; color: var(--text2); font-family: "JetBrains Mono", monospace; }}
+.pill {{ font-size: 11px; padding: 3px 8px; border-radius: 4px; background: var(--mock_bg); color: var(--mock); font-weight: 600; letter-spacing: .04em; }}
 
-.tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; margin: 8px 0 18px; }
-.tile { background: #161a22; border: 1px solid #2a3040; border-top: 3px solid var(--c); border-radius: 8px; padding: 14px 16px 12px; display: grid; gap: 6px; }
-.tile .top { display: flex; justify-content: space-between; align-items: center; }
-.tile .src { font-size: 12px; color: #6f788a; }
-.tile .val { font-size: 30px; font-weight: 600; line-height: 1.1; letter-spacing: -.02em; font-family: "JetBrains Mono", monospace; }
-.tile .val small { font-size: 16px; color: #6f788a; }
-.tile .sub { font-size: 12px; color: #aab2c2; }
+.tiles {{ display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; margin: 8px 0 18px; }}
+.tile {{ background: var(--surface); border: 1px solid var(--line); border-top: 3px solid var(--c); border-radius: 8px; padding: 14px 16px 12px; display: grid; gap: 6px; }}
+.tile .top {{ display: flex; justify-content: space-between; align-items: center; }}
+.tile .src {{ font-size: 12px; color: var(--text3); }}
+.tile .val {{ font-size: 30px; font-weight: 600; line-height: 1.1; letter-spacing: -.02em; font-family: "JetBrains Mono", monospace; }}
+.tile .val small {{ font-size: 16px; color: var(--text3); }}
+.tile .sub {{ font-size: 12px; color: var(--text2); }}
 
-.panel { background: #161a22; border: 1px solid #2a3040; border-radius: 8px; padding: 16px; }
-.panel h2 { margin: 0 0 12px; font-size: 13px; font-weight: 600; display: flex; justify-content: space-between; }
-.panel h2 span { font-weight: 400; color: #6f788a; font-size: 12px; }
-.day { margin-top: 16px; }
-.day .label { margin-bottom: 6px; }
-.ev { display: grid; grid-template-columns: 52px 10px 1fr; gap: 10px; align-items: baseline; padding: 6px 0; border-top: 1px solid #2a3040; }
-.ev:first-of-type { border-top: 0; }
-.ev .t { font-size: 12px; color: #6f788a; font-family: "JetBrains Mono", monospace; }
-.ev .d { width: 8px; height: 8px; border-radius: 50%; background: var(--c); align-self: center; }
-.ev .title { font-weight: 500; font-size: 14px; }
-.ev .meta { font-size: 12px; color: #6f788a; }
-.ev .meta b { color: #aab2c2; font-weight: 500; }
-.hbar { display: grid; grid-template-columns: 90px 1fr 36px; gap: 10px; align-items: center; font-size: 12px; padding: 4px 0; }
-.hbar .bar { height: 8px; border-radius: 4px; background: #1e232d; overflow: hidden; }
-.hbar .bar i { display: block; height: 100%; border-radius: 4px; background: var(--c); }
-.hbar .v { text-align: right; color: #aab2c2; font-family: "JetBrains Mono", monospace; }
-.ptitle { font-size: 13px; font-weight: 600; display: flex; justify-content: space-between; margin-bottom: 4px; }
-.ptitle span { font-weight: 400; color: #6f788a; font-size: 12px; }
-.hm { display: grid; grid-template-columns: 34px repeat(12, 1fr); gap: 3px; align-items: center; }
-.hm .rl { font-size: 11px; color: #6f788a; font-family: "JetBrains Mono", monospace; }
-.hm .c { display: block; height: 14px; border-radius: 3px; background: #1e232d; }
-.hm .c.future { background: transparent; }
-.hm .wl { font-size: 10px; color: #6f788a; font-family: "JetBrains Mono", monospace; padding-top: 4px; }
-.legend { display: flex; gap: 14px; font-size: 11px; color: #6f788a; margin-top: 10px; }
-.legend i { display: inline-block; width: 9px; height: 9px; border-radius: 2px; margin-right: 5px; vertical-align: -1px; }
-.cmp { display: grid; grid-template-columns: 90px 1fr 120px; gap: 10px; align-items: center; font-size: 12px; padding: 5px 0; }
-.cmp .bars { display: grid; gap: 3px; }
-.cmp .bar { height: 7px; border-radius: 4px; background: #1e232d; overflow: hidden; }
-.cmp .bar i { display: block; height: 100%; border-radius: 4px; background: var(--c); }
-.cmp .bar.prev i { background: #3a4152; }
-.cmp .v { text-align: right; color: #e8ebf1; font-family: "JetBrains Mono", monospace; }
-.cmp .v em { display: block; font-style: normal; color: #6f788a; font-size: 11px; }
-.acct { display: grid; grid-template-columns: 10px 1fr; gap: 8px; align-items: center; font-size: 13px; padding: 6px 0; border-top: 1px solid #2a3040; }
-.acct:first-of-type { border-top: 0; }
-.acct .s { width: 8px; height: 8px; border-radius: 50%; background: #3a4152; }
-.acct .s.on { background: #199e70; }
-.acct .s.mock { background: #f5b458; }
-.acct small { display: block; color: #6f788a; font-size: 11px; }
-.sync { font-size: 11px; color: #6f788a; line-height: 1.6; font-family: "JetBrains Mono", monospace; }
-.tile.off .val { color: #6f788a; }
-.empty { color: #6f788a; font-size: 13px; padding: 24px 0; text-align: center; }
-@media (max-width: 800px) { .tiles { grid-template-columns: repeat(2, 1fr); } }
+.panel {{ background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 16px; }}
+.panel h2 {{ margin: 0 0 12px; font-size: 13px; font-weight: 600; display: flex; justify-content: space-between; }}
+.panel h2 span {{ font-weight: 400; color: var(--text3); font-size: 12px; }}
+.day {{ margin-top: 16px; }}
+.day .label {{ margin-bottom: 6px; }}
+.ev {{ display: grid; grid-template-columns: 52px 10px 1fr; gap: 10px; align-items: baseline; padding: 6px 0; border-top: 1px solid var(--line); }}
+.ev:first-of-type {{ border-top: 0; }}
+.ev .t {{ font-size: 12px; color: var(--text3); font-family: "JetBrains Mono", monospace; }}
+.ev .d {{ width: 8px; height: 8px; border-radius: 50%; background: var(--c); align-self: center; }}
+.ev .title {{ font-weight: 500; font-size: 14px; }}
+.ev .meta {{ font-size: 12px; color: var(--text3); }}
+.ev .meta b {{ color: var(--text2); font-weight: 500; }}
+.hbar {{ display: grid; grid-template-columns: 90px 1fr 36px; gap: 10px; align-items: center; font-size: 12px; padding: 4px 0; }}
+.hbar .bar {{ height: 8px; border-radius: 4px; background: var(--surface2); overflow: hidden; }}
+.hbar .bar i {{ display: block; height: 100%; border-radius: 4px; background: var(--c); }}
+.hbar .v {{ text-align: right; color: var(--text2); font-family: "JetBrains Mono", monospace; }}
+.ptitle {{ font-size: 13px; font-weight: 600; display: flex; justify-content: space-between; margin-bottom: 4px; }}
+.ptitle span {{ font-weight: 400; color: var(--text3); font-size: 12px; }}
+.hm {{ display: grid; grid-template-columns: 34px repeat(12, 1fr); gap: 3px; align-items: center; }}
+.hm .rl {{ font-size: 11px; color: var(--text3); font-family: "JetBrains Mono", monospace; }}
+.hm .c {{ display: block; height: 14px; border-radius: 3px; background: var(--surface2); }}
+.hm .c.future {{ background: transparent; }}
+.hm .wl {{ font-size: 10px; color: var(--text3); font-family: "JetBrains Mono", monospace; padding-top: 4px; }}
+.legend {{ display: flex; gap: 14px; font-size: 11px; color: var(--text3); margin-top: 10px; }}
+.legend i {{ display: inline-block; width: 9px; height: 9px; border-radius: 2px; margin-right: 5px; vertical-align: -1px; }}
+.cmp {{ display: grid; grid-template-columns: 90px 1fr 120px; gap: 10px; align-items: center; font-size: 12px; padding: 5px 0; }}
+.cmp .bars {{ display: grid; gap: 3px; }}
+.cmp .bar {{ height: 7px; border-radius: 4px; background: var(--surface2); overflow: hidden; }}
+.cmp .bar i {{ display: block; height: 100%; border-radius: 4px; background: var(--c); }}
+.cmp .bar.prev i {{ background: var(--muted); }}
+.cmp .v {{ text-align: right; color: var(--text); font-family: "JetBrains Mono", monospace; }}
+.cmp .v em {{ display: block; font-style: normal; color: var(--text3); font-size: 11px; }}
+.acct {{ display: grid; grid-template-columns: 10px 1fr; gap: 8px; align-items: center; font-size: 13px; padding: 6px 0; border-top: 1px solid var(--line); }}
+.acct:first-of-type {{ border-top: 0; }}
+.acct .s {{ width: 8px; height: 8px; border-radius: 50%; background: var(--muted); }}
+.acct .s.on {{ background: var(--DO); }}
+.acct .s.mock {{ background: var(--mock); }}
+.acct small {{ display: block; color: var(--text3); font-size: 11px; }}
+.sync {{ font-size: 11px; color: var(--text3); line-height: 1.6; font-family: "JetBrains Mono", monospace; }}
+.tile.off .val {{ color: var(--text3); }}
+.empty {{ color: var(--text3); font-size: 13px; padding: 24px 0; text-align: center; }}
+@media (max-width: 800px) {{ .tiles {{ grid-template-columns: repeat(2, 1fr); }} }}
 </style>
 """)
 
@@ -136,6 +156,7 @@ with st.sidebar:
         st.session_state["force_sync"] = True
         st.rerun()
     st.caption(f"Syncs automatically every {SYNC_EVERY_SECONDS // 60} minutes while open.")
+    st.caption("Light or dark: ⋮ menu → Settings → theme.")
 
 forced = st.session_state.pop("force_sync", False)
 if forced:
@@ -200,8 +221,8 @@ st.html('<div class="tiles">' + "".join(shown) + "</div>")
 
 PLOT_LAYOUT = dict(
     paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
-    font=dict(family="IBM Plex Sans, sans-serif", color="#aab2c2", size=12),
-    margin=dict(l=0, r=0, t=8, b=0), showlegend=False, hoverlabel=dict(bgcolor="#1e232d", font_color="#e8ebf1"),
+    font=dict(family="IBM Plex Sans, sans-serif", color=T["text2"], size=12),
+    margin=dict(l=0, r=0, t=8, b=0), showlegend=False, hoverlabel=dict(bgcolor=T["surface2"], font_color=T["text"]),
 )
 NO_MODEBAR = {"displayModeBar": False}
 
@@ -266,7 +287,7 @@ def per_day_chart(days, source) -> go.Figure | None:
     pad = timedelta(hours=12)
     fig.update_xaxes(showgrid=False, tickformat="%d %b", range=[datetime.combine(start, time.min) - pad, datetime.combine(end, time.min) + pad],
                      tickvals=span if len(span) <= 14 else None)
-    fig.update_yaxes(gridcolor="#2a3040", zeroline=False, dtick=1 if max(r["n"] for r in rows) < 6 else None)
+    fig.update_yaxes(gridcolor=T["line"], zeroline=False, dtick=1 if max(r["n"] for r in rows) < 6 else None)
     return fig
 
 
@@ -325,7 +346,7 @@ with right:
     WEEKDAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
     dow = {r["dow"]: r["n"] for r in q.by_weekday(days, scope)}
     st.html('<div class="panel"><h2>Which days I actually work <span>' + (range_label or "7 days") + '</span></h2>'
-            + bar_list([(WEEKDAYS[i - 1], dow.get(i, 0), "#aab2c2") for i in range(1, 8)] if dow else []) + '</div>')
+            + bar_list([(WEEKDAYS[i - 1], dow.get(i, 0), T["text2"]) for i in range(1, 8)] if dow else []) + '</div>')
 
     UNIT = {"github": "commits", "leetcode": "solved", "todoist": "done", "claude_code": "sessions"}
     if days is None:

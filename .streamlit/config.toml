@@ -1,6 +1,17 @@
+# Two themes. The viewer picks Light / Dark / System from the ⋮ menu → Settings.
+# The dashboard reads the choice (st.context.theme.type) and colours itself to match.
+
 [theme]
-base = "dark"
 primaryColor = "#3987e5"
+
+[theme.light]
+base = "light"
+backgroundColor = "#f4f5f7"
+secondaryBackgroundColor = "#ffffff"
+textColor = "#14171c"
+
+[theme.dark]
+base = "dark"
 backgroundColor = "#0f1218"
 secondaryBackgroundColor = "#161a22"
 textColor = "#e8ebf1"
