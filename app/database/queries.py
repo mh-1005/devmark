@@ -140,3 +140,8 @@ def source_comparison(days: int, source) -> list[dict]:
         GROUP BY 1, 2
         ORDER BY current DESC
     """, {"tz": TZ, "back": days - 1, "days": days, **({"source": source} if source else {})})
+
+
+def has_mock_rows() -> bool:
+    """True if any seeded/mock activity is in the table (their external_id starts with 'mock-')."""
+    return _run("SELECT EXISTS (SELECT 1 FROM activities WHERE external_id LIKE 'mock-%') AS present", {})[0]["present"]

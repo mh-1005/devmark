@@ -1,11 +1,15 @@
 import html
+import os
 from datetime import date, datetime, time, timedelta
 
 import plotly.graph_objects as go
 import streamlit as st
 
+from app.config import save_env
+from app.connectors import ALL_CONNECTORS
 from app.connectors.base import mock_mode_enabled
 from app.database import queries as q
+from app.services.ingestion import ingest
 
 APP_NAME = "devlog"
 TAGLINE = "What I built, learned, finished, and asked for help with."
@@ -74,14 +78,56 @@ html, body, [class*="st-"] { font-family: "IBM Plex Sans", system-ui, sans-serif
 .cmp .bar.prev i { background: #3a4152; }
 .cmp .v { text-align: right; color: #e8ebf1; font-family: "JetBrains Mono", monospace; }
 .cmp .v em { display: block; font-style: normal; color: #6f788a; font-size: 11px; }
+.acct { display: grid; grid-template-columns: 10px 1fr; gap: 8px; align-items: center; font-size: 13px; padding: 6px 0; border-top: 1px solid #2a3040; }
+.acct:first-of-type { border-top: 0; }
+.acct .s { width: 8px; height: 8px; border-radius: 50%; background: #3a4152; }
+.acct .s.on { background: #199e70; }
+.acct .s.mock { background: #f5b458; }
+.acct small { display: block; color: #6f788a; font-size: 11px; }
+.sync { font-size: 11px; color: #6f788a; line-height: 1.6; font-family: "JetBrains Mono", monospace; }
+.tile.off .val { color: #6f788a; }
 .empty { color: #6f788a; font-size: 13px; padding: 24px 0; text-align: center; }
 @media (max-width: 800px) { .tiles { grid-template-columns: repeat(2, 1fr); } }
 </style>
 """)
 
+# ---- sidebar: accounts, connect, sync -------------------------------------
+
+connectors = {cls.source: cls() for cls in ALL_CONNECTORS}  # fresh instances read the current .env
+mock = mock_mode_enabled()
+
+with st.sidebar:
+    st.html('<div class="ptitle">Accounts</div>' + "".join(
+        f'<div class="acct"><i class="s {"mock" if mock else "on" if c.is_configured() else ""}"></i>'
+        f'<div>{SOURCE_LABEL[src]}<small>{"mock data" if mock else c.status()}</small></div></div>'
+        for src, c in connectors.items()
+    ))
+
+    with st.expander("Connect accounts", expanded=not all(c.is_configured() for c in connectors.values())):
+        with st.form("connect", border=False):
+            gh_token = st.text_input("GitHub token", type="password", placeholder="github_pat_…")
+            gh_user = st.text_input("GitHub username", value=os.getenv("GITHUB_USERNAME", ""))
+            lc_user = st.text_input("LeetCode username", value=os.getenv("LEETCODE_USERNAME", ""))
+            td_token = st.text_input("Todoist token", type="password", placeholder="Settings → Integrations → Developer")
+            if st.form_submit_button("Save", type="primary"):
+                typed = {"GITHUB_TOKEN": gh_token, "GITHUB_USERNAME": gh_user, "LEETCODE_USERNAME": lc_user, "TODOIST_API_TOKEN": td_token}
+                save_env({k: v.strip() for k, v in typed.items() if v.strip()})  # blank = leave as is
+                st.rerun()
+        st.caption("Saved to .env on this machine. Tokens are never shown again.")
+
+    if st.button("⟳  Sync now", width="stretch"):
+        with st.spinner("Syncing…"):
+            st.session_state["last_sync"] = (datetime.now(), ingest([cls() for cls in ALL_CONNECTORS]))
+        st.rerun()
+    if "last_sync" in st.session_state:
+        when, results = st.session_state["last_sync"]
+        lines = [f"{SOURCE_LABEL[r['source']]}: " + (f"error · {r['error'][:60]}" if r["mode"] == "error" else f"{r['mode']} · +{r['inserted']} new")
+                 for r in results]
+        st.html(f'<div class="sync">Last sync {when:%H:%M}<br>' + "<br>".join(html.escape(x) for x in lines) + "</div>")
+
 # ---- header ---------------------------------------------------------------
 
-mock_pill = '<span class="pill">● MOCK DATA</span>' if mock_mode_enabled() else ""
+mock_pill = '<span class="pill">● INCLUDES MOCK DATA</span>' if (mock or q.has_mock_rows()) else ""
 st.html(f"""
 <div class="hdr">
   <div><h1>{APP_NAME}<span>_</span></h1><p>{TAGLINE}</p></div>
@@ -108,16 +154,23 @@ d = q.do_summary(days, source)
 a = q.assist_summary(days, source)
 
 
-def tile(cat: str, src: str, value: str, sub: str) -> str:
-    return (f'<div class="tile" style="--c:{COLOR[cat]}"><div class="top"><span class="label">{cat.title()}</span>'
+def tile(cat: str, src: str, value: str, sub: str, off: bool = False) -> str:
+    return (f'<div class="tile{" off" if off else ""}" style="--c:{COLOR[cat]}"><div class="top"><span class="label">{cat.title()}</span>'
             f'<span class="src">{src}</span></div><div class="val">{value}</div><div class="sub">{sub}</div></div>')
 
 
+def off_tile(cat: str, src: str) -> str:
+    return tile(cat, src, "—", "Not connected · add it in the sidebar", off=True)
+
+
+connected = {src: mock or c.is_configured() for src, c in connectors.items()}
+
+
 tiles = {
-    "github": tile("BUILD", "GitHub", str(b["commits"]), f'commits · {b["prs"]} pull requests · {b["repos"]} repos'),
-    "leetcode": tile("LEARN", "LeetCode", str(l["problems"]), f'problems · {l["easy"]} easy · {l["medium"]} medium · {l["hard"]} hard'),
-    "todoist": tile("DO", "Todoist", str(d["tasks"]), f'tasks completed · {d["projects"]} projects'),
-    "claude_code": tile("ASSIST", "Claude Code", f'{a["hours"]:.1f}<small>h</small>', f'{a["sessions"]} sessions · {a["projects"]} projects · {a["prompts"]} prompts'),
+    "github": tile("BUILD", "GitHub", str(b["commits"]), f'commits · {b["prs"]} pull requests · {b["repos"]} repos') if connected["github"] else off_tile("BUILD", "GitHub"),
+    "leetcode": tile("LEARN", "LeetCode", str(l["problems"]), f'problems · {l["easy"]} easy · {l["medium"]} medium · {l["hard"]} hard') if connected["leetcode"] else off_tile("LEARN", "LeetCode"),
+    "todoist": tile("DO", "Todoist", str(d["tasks"]), f'tasks completed · {d["projects"]} projects') if connected["todoist"] else off_tile("DO", "Todoist"),
+    "claude_code": tile("ASSIST", "Claude Code", f'{a["hours"]:.1f}<small>h</small>', f'{a["sessions"]} sessions · {a["projects"]} projects · {a["prompts"]} prompts') if connected["claude_code"] else off_tile("ASSIST", "Claude Code"),
 }
 shown = [tiles[source]] if source else list(tiles.values())
 st.html('<div class="tiles">' + "".join(shown) + "</div>")
