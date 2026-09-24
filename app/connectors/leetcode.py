@@ -73,6 +73,10 @@ class LeetCodeConnector(BaseConnector):
             ("Longest Substring Without Repeating Characters", "Medium"), ("Coin Change", "Medium"),
             ("Course Schedule", "Medium"), ("Confirmation Rate", "Medium"), ("Trapping Rain Water", "Hard"),
             ("Median of Two Sorted Arrays", "Hard"), ("Odd Even Linked List", "Medium"),
+            ("Climbing Stairs", "Easy"), ("Number of Islands", "Medium"), ("Word Ladder", "Hard"),
+            ("Top K Frequent Elements", "Medium"), ("Best Time to Buy and Sell Stock", "Easy"),
+            ("Kth Largest Element in an Array", "Medium"), ("Merge Intervals", "Medium"),
+            ("Serialize and Deserialize Binary Tree", "Hard"),
         ]
         now = datetime.now(timezone.utc)
         return [
@@ -81,9 +85,10 @@ class LeetCodeConnector(BaseConnector):
                 category=self.category,
                 activity_type="problem_solved",
                 title=title,
-                timestamp=now - timedelta(days=rng.randint(0, 20), hours=rng.randint(8, 23), minutes=rng.randint(0, 59)),
+                timestamp=now - timedelta(days=rng.randint(0, 6) if i % 4 == 0 else rng.randint(0, 80),
+                                         hours=rng.randint(8, 23), minutes=rng.randint(0, 59)),
                 external_id=f"mock-lc-{i}",
-                meta={"slug": title.lower().replace(" ", "-"), "difficulty": diff, "lang": rng.choice(["python", "postgresql"])},
+                meta={"slug": title.lower().replace(" ", "-"), "difficulty": diff, "lang": rng.choice(["python", "java", "cpp"])},
             )
             for i, (title, diff) in enumerate(problems)
         ]

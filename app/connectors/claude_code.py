@@ -108,10 +108,10 @@ class ClaudeCodeConnector(BaseConnector):
 
     def mock(self) -> list[Activity]:
         rng = random.Random(3)
-        projects = ["digital-log", "study-arc", "dotfiles", "medallion-data-warehouse"]
+        projects = ["inventory-api", "web-client", "infra", "rust-exercises"]
         now = datetime.now(timezone.utc)
         out = []
-        for i in range(14):
+        for i in range(40):
             project = rng.choice(projects)
             minutes = rng.choice([12, 25, 40, 55, 70, 95, 130])
             out.append(
@@ -120,7 +120,7 @@ class ClaudeCodeConnector(BaseConnector):
                     category=self.category,
                     activity_type="session",
                     title=f"Session — {project}",
-                    timestamp=now - timedelta(days=rng.randint(0, 20), hours=rng.randint(9, 23), minutes=rng.randint(0, 59)),
+                    timestamp=now - timedelta(days=rng.randint(0, 80), hours=rng.randint(9, 23), minutes=rng.randint(0, 59)),
                     duration_seconds=minutes * 60,
                     external_id=f"mock-cc-{i}",
                     meta={"project": project, "user_messages": minutes // 3, "assistant_messages": minutes // 2},

@@ -165,8 +165,6 @@ with st.sidebar:
     if st.button("⟳  Sync now", width="stretch"):
         st.session_state["force_sync"] = True
         st.rerun()
-    st.caption(f"Syncs automatically every {SYNC_EVERY_SECONDS // 60} minutes while open.")
-    st.caption("Light or dark: ⋮ menu → Settings → theme, then refresh the page.")
 
 forced = st.session_state.pop("force_sync", False)
 if forced:
@@ -372,7 +370,7 @@ with right:
                 f'<div class="bars"><div class="bar"><i style="width:{100 * r["current"] / top:.0f}%"></i></div></div>'
                 f'<span class="v">{r["current"]} {UNIT[r["source"]]}<em>{arrow} was {r["previous"]}</em></span></div>'
             )
-        st.html(f'<div class="panel"><h2>Compared to the previous {range_label.lower()} <span>each source vs itself</span></h2>'
+        st.html(f'<div class="panel"><h2>Compared to the previous {range_label.lower()}</h2>'
                 + ("".join(cmp_rows) or '<div class="empty">Nothing in either window.</div>') + '</div>')
 
 rows = q.timeline(days, scope)

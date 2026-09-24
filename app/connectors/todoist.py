@@ -77,15 +77,15 @@ class TodoistConnector(BaseConnector):
     def mock(self) -> list[Activity]:
         rng = random.Random(11)
         tasks = {
-            "Uni": ["Submit DSA assignment", "Review SQL joins notes", "Read OS chapter 4", "Prepare lab report",
-                    "Practice recursion problems", "Watch DBMS lecture", "Revise for quiz"],
-            "Projects": ["Write README", "Fix timezone bug", "Add charts to dashboard", "Refactor connector",
-                         "Plan next milestone", "Set up PostgreSQL"],
-            "Life": ["Groceries", "Call home", "Gym", "Laundry", "Pay phone bill"],
+            "Work": ["Review PR from Sam", "Write release notes", "Update on-call runbook", "Estimate Q4 tickets",
+                     "Prep sprint demo", "Reply to vendor email", "Rotate API keys"],
+            "Learning": ["Read chapter on B-trees", "Finish Rust exercises", "Watch talk on CRDTs",
+                         "Summarise paper notes", "Practice typing drills"],
+            "Home": ["Book dentist", "Water plants", "Return library books", "Fix bike brakes", "Plan weekend trip"],
         }
         now = datetime.now(timezone.utc)
         out = []
-        for i in range(36):
+        for i in range(90):
             project = rng.choice(list(tasks))
             out.append(
                 Activity(
@@ -93,7 +93,7 @@ class TodoistConnector(BaseConnector):
                     category=self.category,
                     activity_type="task_completed",
                     title=rng.choice(tasks[project]),
-                    timestamp=now - timedelta(days=rng.randint(0, 20), hours=rng.randint(7, 23), minutes=rng.randint(0, 59)),
+                    timestamp=now - timedelta(days=rng.randint(0, 80), hours=rng.randint(7, 23), minutes=rng.randint(0, 59)),
                     external_id=f"mock-td-{i}",
                     meta={"project": project, "task_id": f"mock-task-{i}"},
                 )

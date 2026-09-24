@@ -86,16 +86,16 @@ class GitHubConnector(BaseConnector):
 
     def mock(self) -> list[Activity]:
         rng = random.Random(42)  # seeded → same fake data every run
-        repos = ["you/digital-life", "you/study-arc", "you/dotfiles"]
+        repos = ["acme/inventory-api", "acme/web-client", "acme/infra"]
         messages = [
-            "add activity timeline", "fix timezone handling in queries", "refactor connector base class",
-            "update README", "add plotly charts", "tidy dashboard CSS", "handle empty API responses",
-            "add mock mode", "bump dependencies", "rename dashboard entry point",
+            "add pagination to orders endpoint", "fix null price on imported SKUs", "cache product lookups",
+            "migrate to typed config", "add retry to webhook sender", "upgrade CI runner image",
+            "handle empty cart on checkout", "add stock alerts", "tighten CORS rules", "remove dead feature flag",
         ]
         now = datetime.now(timezone.utc)
         activities = []
-        for i in range(30):
-            ts = now - timedelta(days=rng.randint(0, 20), hours=rng.randint(8, 23), minutes=rng.randint(0, 59))
+        for i in range(70):
+            ts = now - timedelta(days=rng.randint(0, 80), hours=rng.randint(8, 23), minutes=rng.randint(0, 59))
             activities.append(
                 Activity(
                     source=self.source,
@@ -107,14 +107,14 @@ class GitHubConnector(BaseConnector):
                     meta={"repo": rng.choice(repos)},
                 )
             )
-        for i in range(3):
+        for i in range(6):
             activities.append(
                 Activity(
                     source=self.source,
                     category=self.category,
                     activity_type="pull_request",
                     title=f"PR #{i + 1}: {rng.choice(messages)}",
-                    timestamp=now - timedelta(days=rng.randint(1, 15), hours=rng.randint(9, 20)),
+                    timestamp=now - timedelta(days=rng.randint(1, 75), hours=rng.randint(9, 20)),
                     external_id=f"mock-pr-{i}",
                     meta={"repo": rng.choice(repos), "state": "open" if i == 0 else "closed"},
                 )
